@@ -1,6 +1,6 @@
 from typing import Optional
 
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 from browser_use.controller.views import (
 	ClickElementControllerAction,
@@ -10,29 +10,25 @@ from browser_use.controller.views import (
 
 
 class AskHumanAgentAction(BaseModel):
-	question: str
+	question: str = Field(description='Question to the human')
 
 
 class AgentState(BaseModel):
-	valuation_previous_goal: str
-	memory: str
-	next_goal: str
+	valuation_previous_goal: str = Field(
+		default='', description='Valuation if the previous goal was successful or what went wrong'
+	)
+	memory: str = Field(default='', description='Memory of the current state')
+	next_goal: str = Field(default='', description='Description of the next immediate goal')
 
 
 class AgentOnlyAction(BaseModel):
-	ask_human: Optional[AskHumanAgentAction] = None
-
-	@staticmethod
-	def description() -> str:
-		return """
-- Ask for human help / information:
-  {"ask_human": {"question": "To clarify ..."}}"""
+	ask_human: Optional[AskHumanAgentAction] = Field(
+		default=None, description='Ask for human help / information'
+	)
 
 
 class AgentOutput(ControllerActions, AgentOnlyAction):
-	@staticmethod
-	def description() -> str:
-		return AgentOnlyAction.description() + ControllerActions.description()
+	pass
 
 
 class Output(BaseModel):
