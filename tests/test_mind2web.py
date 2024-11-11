@@ -54,6 +54,7 @@ def validator(llm):
 	return ValidationService(llm)
 
 
+# run with: pytest -s -v tests/test_mind2web.py:test_random_samples
 @pytest.mark.asyncio
 async def test_random_samples(test_cases: List[Dict[str, Any]], llm, controller, validator):
 	"""Test a random sampling of tasks across different websites"""

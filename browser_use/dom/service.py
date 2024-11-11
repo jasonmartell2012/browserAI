@@ -8,7 +8,6 @@ from browser_use.dom.views import DomContentItem, ProcessedDomContent
 from browser_use.utils import time_execution_sync
 
 logger = logging.getLogger(__name__)
-logging.basicConfig(level=logging.INFO)
 
 
 class DomService:

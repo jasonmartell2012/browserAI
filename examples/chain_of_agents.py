@@ -10,9 +10,6 @@ import asyncio
 
 from browser_use import Agent, Controller
 
-logging.basicConfig(level=logging.INFO)
-
-
 # Persist the browser state across agents
 controller = Controller()
 

@@ -23,10 +23,6 @@ from browser_use.utils import time_execution_async
 
 load_dotenv()
 logger = logging.getLogger(__name__)
-logging.basicConfig(
-	level=logging.INFO,
-	force=True,  # Prevent changing root logger config
-)
 
 
 class AgentService:

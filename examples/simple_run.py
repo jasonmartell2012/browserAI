@@ -18,8 +18,6 @@ from langchain_openai import ChatOpenAI
 
 from browser_use import Agent
 
-logging.basicConfig(level=logging.INFO)
-
 llm = ChatOpenAI(model='gpt-4o')
 agent = Agent(
 	task='Opening new tabs to search for images of Albert Einstein, Oprah Winfrey, and Steve Jobs. Then ask user for further instructions.',

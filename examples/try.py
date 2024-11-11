@@ -19,8 +19,6 @@ import asyncio
 from browser_use import Agent
 from browser_use.controller.service import ControllerService
 
-logging.basicConfig(level=logging.INFO)
-
 
 def get_llm(provider: str):
 	if provider == 'anthropic':
