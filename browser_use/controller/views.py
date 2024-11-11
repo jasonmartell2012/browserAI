@@ -53,9 +53,6 @@ class ControllerActions(BaseModel):
 
 	@staticmethod
 	def description() -> str:
-		"""
-		Returns a human-readable description of available actions.
-		"""
 		return """
 - Search Google:
    {"search_google": {"query": "Your search query"}}

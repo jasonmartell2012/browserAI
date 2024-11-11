@@ -15,22 +15,19 @@ class AgentSystemPrompt:
 		Returns:
 		    str: Formatted system prompt
 		"""
-		# System prompts for the agent
-		# 		output_format = """
-		# {"valuation_previous_goal": "Success if completed, else short sentence of why not successful.", "goal": "short description what you want to achieve", "action": "action_name", "params": {"param_name": "param_value"}}
-		#     """
+
 		RESPONSE_FORMAT = """{{
 			"current_state": {{
-				"valuation_previous_goal": "String describing if previous action succeeded or failed",
-				"memory": "String to store progress information",
-				"next_goal": "String describing your next immediate goal"
+				"valuation_previous_goal": "String starting with "Success" or "Failed:" and if failed describe why",
+				"memory": "String to store progress information for the overall task to rememeber until the end of the task",
+				"next_goal": "String describing the next immediate goal which can be achieved with one action"
 			}},
 			"action": {{
 				// EXACTLY ONE of the following available actions must be specified
 			}}
 		}}"""
 
-		EXAMPLE_RESPONSE = """{"current_state": {"valuation_previous_goal": "Success", "memory": "User is on the homepage, we found already 3/7 jobs", "next_goal": "Click on the next job"}, "action": {"click_element": {"id": 44,"num_clicks": 1}}}"""
+		EXAMPLE_RESPONSE = """{"current_state": {"valuation_previous_goal": "Success", "memory": "We applied already for 3/7 jobs, 1. ..., 2. ..., 3. ...", "next_goal": "Click on the button x to apply for the next job"}, "action": {"click_element": {"id": 44,"num_clicks": 1}}}"""
 
 		AGENT_PROMPT = f"""
     

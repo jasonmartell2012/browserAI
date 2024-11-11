@@ -10,21 +10,17 @@ from browser_use.controller.views import (
 
 
 class AskHumanAgentAction(BaseModel):
-	question: str = Field(description='Question to the human')
+	question: str
 
 
 class AgentState(BaseModel):
-	valuation_previous_goal: str = Field(
-		default='', description='Valuation if the previous goal was successful or what went wrong'
-	)
-	memory: str = Field(default='', description='Memory of the current state')
-	next_goal: str = Field(default='', description='Description of the next immediate goal')
+	valuation_previous_goal: str
+	memory: str
+	next_goal: str
 
 
 class AgentOnlyAction(BaseModel):
-	ask_human: Optional[AskHumanAgentAction] = Field(
-		default=None, description='Ask for human help / information'
-	)
+	ask_human: Optional[AskHumanAgentAction]
 
 
 class AgentOutput(ControllerActions, AgentOnlyAction):
