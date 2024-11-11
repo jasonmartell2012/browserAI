@@ -7,15 +7,17 @@ from langchain_core.messages import AIMessage, BaseMessage, HumanMessage
 
 from browser_use.agent.prompts import AgentMessagePrompt, AgentSystemPrompt
 from browser_use.agent.views import (
+	ActionResult,
 	AgentHistory,
 	AgentOutput,
 	ClickElementControllerHistoryItem,
+	CustomAction,
 	InputTextControllerHistoryItem,
 	Output,
+	create_agent_output_class,
 )
 from browser_use.controller.service import ControllerService
 from browser_use.controller.views import (
-	ControllerActionResult,
 	ControllerActions,
 	ControllerPageState,
 )
@@ -30,10 +32,10 @@ class AgentService:
 		self,
 		task: str,
 		llm: BaseChatModel,
+		custom_actions: list[CustomAction] = None,
 		controller: ControllerService | None = None,
 		use_vision: bool = True,
 		save_conversation_path: str | None = None,
-		allow_terminal_input: bool = True,
 	):
 		"""
 		Agent service.
@@ -42,11 +44,10 @@ class AgentService:
 			task (str): Task to be performed.
 			llm (AvailableModel): Model to be used.
 			controller (ControllerService | None): You can reuse an existing or (automatically) create a new one.
-			allow_terminal_input (bool): Flag to allow or disallow terminal input to resolve uncertanty or if the agent is stuck.
 		"""
 		self.task = task
 		self.use_vision = use_vision
-		self.allow_terminal_input = allow_terminal_input
+		self.custom_actions = {action.name: action for action in (custom_actions or [])}
 
 		self.controller_injected = controller is not None
 		self.controller = controller or ControllerService()
@@ -66,6 +67,9 @@ class AgentService:
 			logger.info(f'Saving conversation to {save_conversation_path}')
 
 		self.action_history: list[AgentHistory] = []
+
+		# Create dynamic AgentOutput with registered custom actions
+		self.AgentOutputClass = create_agent_output_class(custom_actions or [])
 
 	async def run(self, max_steps: int = 100):
 		"""
@@ -91,28 +95,22 @@ class AgentService:
 				self.controller.browser.close()
 
 	@time_execution_async('--step')
-	async def step(self) -> tuple[AgentHistory, ControllerActionResult]:
-		logger.info(f'📍 Step {self.n+1}')
-
+	async def step(self) -> tuple[AgentHistory, ActionResult]:
 		state = self.controller.get_current_state(screenshot=self.use_vision)
 		action = await self.get_next_action(state)
 
-		if isinstance(action, ControllerActions):
+		# Handle controller actions
+		if any(getattr(action, field) for field in ControllerActions.model_fields):
 			result = self.controller.act(action)
+		# Handle custom actions
+		elif any(getattr(action, name) for name in self.custom_actions):
+			action_name = next(name for name in self.custom_actions if getattr(action, name))
+			params = getattr(action, action_name) or {}
+			result = self.custom_actions[action_name].execute(params)
 		else:
-			raise Exception('Invalid action')
+			result = ControllerActionResult(done=False, error=f'Invalid action type: {action}')
 
-		self.n += 1
-
-		if result.error:
-			self.messages.append(HumanMessage(content=f'Error: {result.error}'))
-			logger.info(f'Error: {result.error} - trying to self-correct')
-		if result.extracted_content:
-			self.messages.append(
-				HumanMessage(content=f'Extracted content:\n {result.extracted_content}')
-			)
-
-		# Convert action to history and update click/input fields if present
+		# Update history
 		history_item = self._make_history_item(action, state)
 		self.action_history.append(history_item)
 
@@ -168,7 +166,13 @@ class AgentService:
 		return response.action
 
 	def _get_action_description(self) -> str:
-		return AgentOutput.description()
+		base_description = AgentOutput.description()
+		if self.custom_actions:
+			custom_descriptions = '\nCustom Actions:\n' + '\n'.join(
+				action.get_prompt_description() for action in self.custom_actions.values()
+			)
+			return base_description + custom_descriptions
+		return base_description
 
 	def _save_conversation(self, input_messages: list[BaseMessage], response: Output):
 		if self.save_conversation_path is not None:

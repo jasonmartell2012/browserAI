@@ -1,7 +1,7 @@
+from browser_use.agent.views import ActionResult
 from browser_use.browser.service import BrowserService
 from browser_use.browser.views import BrowserState
 from browser_use.controller.views import (
-	ControllerActionResult,
 	ControllerActions,
 	ControllerPageState,
 )
@@ -53,7 +53,7 @@ class ControllerService:
 		)
 
 	@time_execution_sync('--act')
-	def act(self, action: ControllerActions) -> ControllerActionResult:
+	def act(self, action: ControllerActions) -> ActionResult:
 		try:
 			current_state = self.get_cached_browser_state(force_update=False)
 
@@ -73,7 +73,7 @@ class ControllerService:
 				self.browser.go_back()
 			elif action.done:
 				self.browser.done(action.done.text)
-				return ControllerActionResult(done=True, extracted_content=action.done.text)
+				return ActionResult(done=True, extracted_content=action.done.text)
 			elif action.click_element:
 				self.browser.click_element_by_index(
 					action.click_element.id, current_state, action.click_element.num_clicks
@@ -84,11 +84,11 @@ class ControllerService:
 				)
 			elif action.extract_page_content:
 				content = self.browser.extract_page_content()
-				return ControllerActionResult(done=False, extracted_content=content)
+				return ActionResult(done=False, extracted_content=content)
 			else:
 				raise ValueError(f'Unknown action: {action}')
 
-			return ControllerActionResult(done=False)
+			return ActionResult(done=False)
 
 		except Exception as e:
-			return ControllerActionResult(done=False, error=f'Error executing action: {str(e)}')
+			return ActionResult(done=False, error=f'Error executing action: {str(e)}')

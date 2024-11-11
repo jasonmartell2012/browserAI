@@ -77,12 +77,6 @@ class ControllerActions(BaseModel):
 """
 
 
-class ControllerActionResult(BaseModel):
-	done: bool
-	extracted_content: Optional[str] = None
-	error: Optional[str] = None
-
-
 class ControllerPageState(BrowserState):
 	screenshot: Optional[str] = None
 	tabs: list[dict] = []  # Add tabs info to state
