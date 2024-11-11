@@ -86,7 +86,7 @@ class AgentService:
 
 				if result.done:
 					logger.info('\n✅ Task completed successfully')
-					logger.info(f'Extracted content: \n{result.extracted_content}')
+					logger.info(f'📄 Extracted content: \n{result.extracted_content}')
 					return action.done, self.action_history
 
 			logger.info('\n' + '=' * 50)
@@ -188,9 +188,9 @@ class AgentService:
 		self.messages.append(history_new_message)
 		self.messages.append(AIMessage(content=response.model_dump_json(exclude_unset=True)))
 		logger.info(
-			f'\nThought: {response.current_state.model_dump_json(exclude_unset=True, indent=4)}'
+			f'💭 Thought: {response.current_state.model_dump_json(exclude_unset=True, indent=4)}'
 		)
-		logger.info(f'Next action: {response.action.model_dump_json(exclude_unset=True)}')
+		logger.info(f'➡️  Action: {response.action.model_dump_json(exclude_unset=True)}')
 		self._save_conversation(input_messages, response)
 
 		return response.action

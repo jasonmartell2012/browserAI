@@ -207,7 +207,7 @@ class BrowserService:
 		"""
 		Ends the task and waits for further instructions.
 		"""
-		logger.info(f'Done on page {self.current_state.url}\n\n: {text}')
+		logger.info(f'✅ Done on page {self.current_state.url}\n\n: {text}')
 		return text
 
 	def take_screenshot(self, full_page: bool = False) -> str:
@@ -274,7 +274,7 @@ class BrowserService:
 
 		xpath = state.selector_map[index]
 		self._input_text_by_xpath(xpath, text)
-		logger.info(f'Input text into index {index}: xpath: {xpath}')
+		logger.info(f'⌨️  Input text into element {index}: {xpath}')
 
 	def _click_element_by_xpath(self, xpath: str):
 		"""
@@ -346,8 +346,7 @@ class BrowserService:
 		for _ in range(num_clicks):
 			try:
 				self._click_element_by_xpath(xpath)
-
-				msg = f'Clicked index {index}: xpath: {xpath}'
+				msg = f'🖱️  Clicked element {index}: {xpath}'
 				if num_clicks > 1:
 					msg += f' ({_ + 1}/{num_clicks} clicks)'
 				logger.info(msg)
