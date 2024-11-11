@@ -75,23 +75,16 @@ class AgentService:
 		"""
 
 		try:
-			logger.info('\n' + '=' * 50)
 			logger.info(f'🚀 Starting task: {self.task}')
-			logger.info('=' * 50)
 
 			for i in range(max_steps):
-				logger.info(f'\n📍 Step {i+1}')
-
 				action, result = await self.step()
 
 				if result.done:
-					logger.info('\n✅ Task completed successfully')
-					logger.info(f'📄 Extracted content: \n{result.extracted_content}')
+					logger.info('✅ Task completed successfully')
 					return action.done, self.action_history
 
-			logger.info('\n' + '=' * 50)
 			logger.info('❌ Failed to complete task in maximum steps')
-			logger.info('=' * 50)
 			return None, self.action_history
 		finally:
 			if not self.controller_injected:
@@ -99,6 +92,8 @@ class AgentService:
 
 	@time_execution_async('--step')
 	async def step(self) -> tuple[AgentHistory, ControllerActionResult]:
+		logger.info(f'📍 Step {self.n+1}')
+
 		state = self.controller.get_current_state(screenshot=self.use_vision)
 		action = await self.get_next_action(state)
 

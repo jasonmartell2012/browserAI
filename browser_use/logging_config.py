@@ -12,7 +12,11 @@ def setup_logging():
 		def format(self, record):
 			# Get the last part of the module name (after the last dot)
 			if record.name.startswith('browser_use.'):
-				record.name = record.name.split('.')[-2]  # Get the second-to-last part
+				module_parts = record.name.split('.')
+				if len(module_parts) >= 3:  # browser_use.agent.service
+					record.name = module_parts[-2]  # Get 'agent'
+				else:
+					record.name = module_parts[-1]  # Fallback to last part
 			return super().format(record)
 
 	# Create formatter with custom class
