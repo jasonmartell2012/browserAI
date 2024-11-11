@@ -52,11 +52,10 @@ class AgentSystemPrompt:
 	1. Only use indexes that exist in the input list for click or input text actions
 	2. Use extract_page_content to get more page information
 	3. If stuck, try alternative approaches, go back, search google
-	4. Ask for human help only when completely stuck or if you need more information
-	5. Use extract_page_content followed by done action to complete task
-	6. If an image is provided, use it to understand the context
-	7. ALWAYS respond in the RESPONSE FORMAT with valid JSON:
-	8. If the page is empty use actions like "go_to_url", "search_google" or "open_tab"
+	4. Use extract_page_content followed by done action to complete task
+	5. If an image is provided, use it to understand the context
+	6. ALWAYS respond in the RESPONSE FORMAT with valid JSON:
+	7. If the page is empty use actions like "go_to_url", "search_google" or "open_tab"
 
 	Remember: Choose EXACTLY ONE action per response. Invalid combinations or multiple actions will be rejected.
     """

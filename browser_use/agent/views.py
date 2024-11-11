@@ -9,21 +9,13 @@ from browser_use.controller.views import (
 )
 
 
-class AskHumanAgentAction(BaseModel):
-	question: str
-
-
 class AgentState(BaseModel):
 	valuation_previous_goal: str
 	memory: str
 	next_goal: str
 
 
-class AgentOnlyAction(BaseModel):
-	ask_human: Optional[AskHumanAgentAction]
-
-
-class AgentOutput(ControllerActions, AgentOnlyAction):
+class AgentOutput(ControllerActions):
 	pass
 
 

@@ -97,10 +97,11 @@ class AgentService:
 		state = self.controller.get_current_state(screenshot=self.use_vision)
 		action = await self.get_next_action(state)
 
-		if action.ask_human and action.ask_human.question:
-			action = await self._take_human_input(action.ask_human.question)
+		if isinstance(action, ControllerActions):
+			result = self.controller.act(action)
+		else:
+			raise Exception('Invalid action')
 
-		result = self.controller.act(action)
 		self.n += 1
 
 		if result.error:
@@ -139,31 +140,8 @@ class AgentService:
 			extract_page_content=action.extract_page_content,
 			switch_tab=action.switch_tab,
 			open_tab=action.open_tab,
-			ask_human=action.ask_human,
 			url=state.url,
 		)
-
-	async def _take_human_input(self, question: str) -> AgentOutput:
-		if self.allow_terminal_input:
-			human_input = input(f'\nHi, your input is required: {question}\n\n')
-		else:
-			logger.info(
-				f'Terminal input requested but not allowed. Set allow_terminal_input=True to enable. Question of agent: {question}'
-			)
-			human_input = (
-				'Human input not allowed, make assumptions for uncertainty and try yourself.'
-			)
-
-		logger.info('-' * 50)
-		self.messages.append(HumanMessage(content=human_input))
-
-		structured_llm = self.llm.with_structured_output(AgentOutput)
-
-		action: AgentOutput = await structured_llm.ainvoke(self.messages)  # type: ignore
-
-		self.messages.append(AIMessage(content=action.model_dump_json()))
-
-		return action
 
 	@time_execution_async('--get_next_action')
 	async def get_next_action(self, state: ControllerPageState) -> AgentOutput:
@@ -175,7 +153,6 @@ class AgentService:
 
 		structured_llm = self.llm.with_structured_output(Output, include_raw=False)
 
-		#
 		response: Output = await structured_llm.ainvoke(input_messages)  # type: ignore
 
 		# Only append the output message
