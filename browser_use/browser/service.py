@@ -270,7 +270,9 @@ class BrowserService:
 
 	def input_text_by_index(self, index: int, text: str, state: BrowserState):
 		if index not in state.selector_map:
-			raise Exception(f'Element index {index} not found in selector map')
+			raise Exception(
+				f'Element index {index} not found in selector map. Only use indexes from which exist in the input'
+			)
 
 		xpath = state.selector_map[index]
 		self._input_text_by_xpath(xpath, text)
@@ -334,7 +336,9 @@ class BrowserService:
 		Can click multiple times if specified.
 		"""
 		if index not in state.selector_map:
-			raise Exception(f'Element index {index} not found in selector map')
+			raise Exception(
+				f'Element index {index} not found in selector map. Only use indexes which exist in the input'
+			)
 
 		xpath = state.selector_map[index]
 		driver = self._get_driver()

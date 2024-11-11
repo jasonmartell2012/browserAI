@@ -105,7 +105,7 @@ class AgentService:
 
 		if result.error:
 			self.messages.append(HumanMessage(content=f'Error: {result.error}'))
-
+			logger.info(f'Error: {result.error} - trying to self-correct')
 		if result.extracted_content:
 			self.messages.append(
 				HumanMessage(content=f'Extracted content:\n {result.extracted_content}')
