@@ -1,20 +1,22 @@
 import json
 import logging
+from typing import Optional, Type
 
 from dotenv import load_dotenv
 from langchain_core.language_models.chat_models import BaseChatModel
 from langchain_core.messages import AIMessage, BaseMessage, HumanMessage
+from pydantic import create_model
 
 from browser_use.agent.prompts import AgentMessagePrompt, AgentSystemPrompt
 from browser_use.agent.views import (
 	ActionResult,
 	AgentHistory,
-	AgentOutput,
+	AgentState,
 	ClickElementControllerHistoryItem,
 	CustomAction,
+	DynamicAgentOutput,
 	InputTextControllerHistoryItem,
 	Output,
-	create_agent_output_class,
 )
 from browser_use.controller.service import ControllerService
 from browser_use.controller.views import (
@@ -32,10 +34,10 @@ class AgentService:
 		self,
 		task: str,
 		llm: BaseChatModel,
-		custom_actions: list[CustomAction] = None,
-		controller: ControllerService | None = None,
+		custom_actions: Optional[list[CustomAction]] = None,
+		controller: Optional[ControllerService] = None,
 		use_vision: bool = True,
-		save_conversation_path: str | None = None,
+		save_conversation_path: Optional[str] = None,
 	):
 		"""
 		Agent service.
@@ -68,8 +70,12 @@ class AgentService:
 
 		self.action_history: list[AgentHistory] = []
 
-		# Create dynamic AgentOutput with registered custom actions
-		self.AgentOutputClass = create_agent_output_class(custom_actions or [])
+		# Get or create dynamic models with proper typing
+		self.AgentOutputClass: Type[DynamicAgentOutput]
+		self.OutputClass: Type[Output]
+		self.AgentOutputClass, self.OutputClass = DynamicAgentOutput.get_or_create_models(
+			custom_actions
+		)
 
 	async def run(self, max_steps: int = 100):
 		"""
@@ -100,15 +106,14 @@ class AgentService:
 		action = await self.get_next_action(state)
 
 		# Handle controller actions
-		if any(getattr(action, field) for field in ControllerActions.model_fields):
+		if isinstance(action, ControllerActions):
 			result = self.controller.act(action)
 		# Handle custom actions
-		elif any(getattr(action, name) for name in self.custom_actions):
-			action_name = next(name for name in self.custom_actions if getattr(action, name))
-			params = getattr(action, action_name) or {}
-			result = self.custom_actions[action_name].execute(params)
+		elif isinstance(action, self.AgentOutputClass):
+			result = action.execute()
 		else:
-			result = ControllerActionResult(done=False, error=f'Invalid action type: {action}')
+			result = ActionResult(done=False, error=f'Invalid action type: {action}')
+			logger.error(f'Invalid action type: {action}')
 
 		# Update history
 		history_item = self._make_history_item(action, state)
@@ -116,7 +121,9 @@ class AgentService:
 
 		return history_item, result
 
-	def _make_history_item(self, action: AgentOutput, state: ControllerPageState) -> AgentHistory:
+	def _make_history_item(
+		self, action: DynamicAgentOutput, state: ControllerPageState
+	) -> AgentHistory:
 		return AgentHistory(
 			search_google=action.search_google,
 			go_to_url=action.go_to_url,
@@ -142,16 +149,14 @@ class AgentService:
 		)
 
 	@time_execution_async('--get_next_action')
-	async def get_next_action(self, state: ControllerPageState) -> AgentOutput:
-		# TODO: include state, actions, etc.
-
+	async def get_next_action(self, state: ControllerPageState) -> DynamicAgentOutput:
 		new_message = AgentMessagePrompt(state).get_user_message()
 		logger.debug(f'current tabs: {state.tabs}')
 		input_messages = self.messages + [new_message]
 
-		structured_llm = self.llm.with_structured_output(Output, include_raw=False)
-
-		response: Output = await structured_llm.ainvoke(input_messages)  # type: ignore
+		# Use the dynamic output class
+		structured_llm = self.llm.with_structured_output(self.OutputClass)
+		response: Output = await structured_llm.ainvoke(input_messages)
 
 		# Only append the output message
 		history_new_message = AgentMessagePrompt(state).get_message_for_history()
@@ -166,7 +171,7 @@ class AgentService:
 		return response.action
 
 	def _get_action_description(self) -> str:
-		base_description = AgentOutput.description()
+		base_description = self.AgentOutputClass.description()
 		if self.custom_actions:
 			custom_descriptions = '\nCustom Actions:\n' + '\n'.join(
 				action.get_prompt_description() for action in self.custom_actions.values()

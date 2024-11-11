@@ -1,5 +1,6 @@
-from inspect import signature
-from typing import Any, Callable, Dict, Optional, Type
+from __future__ import annotations
+
+from typing import Any, Callable, ClassVar, Dict, ForwardRef, Optional, Type, Union
 
 from pydantic import BaseModel, create_model
 
@@ -14,29 +15,6 @@ class AgentState(BaseModel):
 	valuation_previous_goal: str
 	memory: str
 	next_goal: str
-
-
-class AgentOutput(ControllerActions):
-	pass
-
-
-class Output(BaseModel):
-	current_state: AgentState
-	action: AgentOutput
-
-
-class ClickElementControllerHistoryItem(ClickElementControllerAction):
-	xpath: str | None
-
-
-class InputTextControllerHistoryItem(InputTextControllerAction):
-	xpath: str | None
-
-
-class AgentHistory(AgentOutput):
-	click_element: Optional[ClickElementControllerHistoryItem] = None
-	input_text: Optional[InputTextControllerHistoryItem] = None
-	url: str
 
 
 class ActionResult(BaseModel):
@@ -73,10 +51,56 @@ class CustomAction(BaseModel):
 		return f'- {self.name} ({params}):\n   {self.description}'
 
 
-def create_agent_output_class(custom_actions: list[CustomAction]) -> Type[BaseModel]:
-	"""Dynamically create AgentOutput class with custom actions"""
-	# Create fields for custom actions
-	custom_fields = {action.name: (Optional[dict[str, Any]], None) for action in custom_actions}
+class DynamicAgentOutput(ControllerActions):
+	"""Base class for dynamic agent output that extends ControllerActions"""
 
-	# Create the combined model
-	return create_model('DynamicAgentOutput', __base__=ControllerActions, **custom_fields)
+	custom_actions: Dict[str, Optional[Dict[str, Any]]] = {}
+
+	# Use ClassVar for class-level type hints with forward references
+	_cached_model: ClassVar[Optional[Type[DynamicAgentOutput]]] = None
+	_cached_output_model: ClassVar[Optional[Type[Output]]] = None
+
+	@classmethod
+	def get_or_create_models(
+		cls, custom_actions: Optional[list[CustomAction]] = None
+	) -> tuple[Type[DynamicAgentOutput], Type[Output]]:
+		"""Gets or creates both dynamic models, caching them for reuse"""
+		if cls._cached_model is None or cls._cached_output_model is None:
+			# Create dynamic agent output model with custom actions
+			custom_fields: Dict[str, tuple[Type, Any]] = {
+				action.name: (Optional[Dict[str, Any]], None) for action in (custom_actions or [])
+			}
+
+			# Create the dynamic action model
+			cls._cached_model = create_model(
+				'DynamicAgentOutputWithActions', __base__=cls, **custom_fields
+			)
+
+			# Create the combined output model
+			cls._cached_output_model = create_model(
+				'DynamicOutput',
+				current_state=(AgentState, ...),
+				action=(cls._cached_model, ...),
+				__base__=Output,
+			)
+
+		return cls._cached_model, cls._cached_output_model
+
+
+class Output(BaseModel):
+	current_state: AgentState
+	action: DynamicAgentOutput  # Forward reference works now due to __future__ import
+
+
+class ClickElementControllerHistoryItem(ClickElementControllerAction):
+	xpath: str | None
+
+
+class InputTextControllerHistoryItem(InputTextControllerAction):
+	xpath: str | None
+
+
+class AgentHistory(DynamicAgentOutput):
+	click_element: Optional[ClickElementControllerHistoryItem] = None
+	input_text: Optional[InputTextControllerHistoryItem] = None
+	url: str

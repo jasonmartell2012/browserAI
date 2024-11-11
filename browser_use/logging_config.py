@@ -33,7 +33,7 @@ def setup_logging():
 
 	# Configure your application's logger
 	app_logger = logging.getLogger('browser_use')
-	app_logger.setLevel(logging.INFO)
+	app_logger.setLevel(logging.DEBUG)
 	app_logger.propagate = False  # Prevent duplicate logs
 	app_logger.addHandler(console_handler)
 

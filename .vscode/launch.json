@@ -2,20 +2,21 @@
     "version": "0.2.0",
     "configurations": [
         {
-            "name": "Python: Debug Tests",
-            "type": "python",
+            "name": "Python Debugger: Module",
+            "type": "debugpy",
             "request": "launch",
-            "program": "${workspaceFolder}/.venv/bin/pytest",
-            "args": [
-                "src/tests/test_kayak_search.py",
-                "-v",
-                "-s"
-            ],
+            "module": "examples.extend_actions"
+        },
+        {
+            "name": "Python: Debug extend_actions",
+            "type": "module",
+            "request": "launch",
+            "module": "examples.extend_actions",
             "console": "integratedTerminal",
-			"justMyCode": false,
-			"env": {
-				"PYTHONPATH": "${workspaceFolder}"
-			}
-		}
-	]
+            "justMyCode": false,
+            "env": {
+                "PYTHONPATH": "${workspaceFolder}"
+            }
+        },
+    ]
 }
