@@ -125,6 +125,7 @@ class AgentService:
 		# Handle controller actions
 		if action.is_controller_action():
 			result = self.controller.act(action)
+
 		# Handle custom actions
 		elif action.is_custom_action():
 			custom_action, params = action.get_custom_action_and_params()
@@ -132,6 +133,12 @@ class AgentService:
 		else:
 			result = ActionResult(done=False, error=f'No valid action found: {action}')
 			logger.error(f'No valid action found: {action}')
+
+		# include result in model
+		if result.extracted_content is not None:
+			self.messages.append(HumanMessage(content=result.extracted_content))
+		if result.error is not None:
+			self.messages.append(HumanMessage(content=result.error))
 
 		# Update history
 		history_item = self._make_history_item(action, state)
