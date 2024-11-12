@@ -29,14 +29,12 @@ class CustomAction(BaseModel):
 
 	name: str
 	description: str
-	_function: Callable
 	prompt_description: str = ''
 
-	model_config = ConfigDict(
-		arbitrary_types_allowed=True,
-		# Use list instead of set for excluded fields
-		json_schema_extra={'exclude': ['_function', 'prompt_description']},
-	)
+	# Store function outside of model fields
+	_function: ClassVar[Dict[str, Callable]] = {}
+
+	model_config = ConfigDict(arbitrary_types_allowed=True)
 
 	def __init__(self, description: str, function: Callable, **kwargs):
 		# Generate prompt description before super().__init__
@@ -45,17 +43,21 @@ class CustomAction(BaseModel):
 		param_str = ', '.join(f'"{k}": "{v}"' for k, v in params.items())
 		prompt_desc = f'- {description}:\n{{"{function.__name__}": {{{param_str}}}}}'
 
+		# Store function in class variable
+		self._function[function.__name__] = function
+
 		super().__init__(
 			name=function.__name__,
 			description=description,
-			_function=function,
 			prompt_description=prompt_desc,
 			**kwargs,
 		)
 
 	def execute(self, params: dict) -> ActionResult:
 		try:
-			result = self._function(**params)
+			# Use stored function
+			func = self._function[self.name]
+			result = func(**params)
 			return ActionResult(done=False, extracted_content=str(result) if result else None)
 		except Exception as e:
 			return ActionResult(done=False, error=str(e))
