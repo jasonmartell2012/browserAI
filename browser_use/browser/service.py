@@ -13,7 +13,7 @@ from main_content_extractor import MainContentExtractor
 from Screenshot import Screenshot
 from selenium import webdriver
 from selenium.webdriver.chrome.options import Options
-from selenium.webdriver.chrome.service import Service
+from selenium.webdriver.chrome.service import Service as ChromeService
 from selenium.webdriver.common.action_chains import ActionChains
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support import expected_conditions as EC
@@ -45,62 +45,72 @@ class BrowserService:
 		Returns:
 		    webdriver.Chrome: Configured Chrome WebDriver instance
 		"""
-		chrome_options = Options()
-		if self.headless:
-			chrome_options.add_argument('--headless')
+		try:
+			os.system('pkill -f chromedriver')
+			os.system('pkill -f "Google Chrome"')
 
-		# Anti-detection measures
-		chrome_options.add_argument('--disable-blink-features=AutomationControlled')
-		chrome_options.add_experimental_option('excludeSwitches', ['enable-automation'])
-		chrome_options.add_experimental_option('useAutomationExtension', False)
+			chrome_options = Options()
+			if self.headless:
+				chrome_options.add_argument('--headless=new')  # Updated headless argument
 
-		# Additional stealth settings
-		# chrome_options.add_argument('--start-maximized')
-		chrome_options.add_argument('--window-size=1280,1024')
-		chrome_options.add_argument('--disable-extensions')
-		chrome_options.add_argument('--no-sandbox')
-		chrome_options.add_argument('--disable-infobars')
+			# Anti-detection measures
+			chrome_options.add_argument('--disable-blink-features=AutomationControlled')
+			chrome_options.add_experimental_option('excludeSwitches', ['enable-automation'])
+			chrome_options.add_experimental_option('useAutomationExtension', False)
 
-		# Initialize the Chrome driver
-		driver = webdriver.Chrome(
-			service=Service(ChromeDriverManager().install()), options=chrome_options
-		)
+			# Additional stealth settings
+			chrome_options.add_argument('--window-size=1280,1024')
+			chrome_options.add_argument('--disable-extensions')
+			chrome_options.add_argument('--no-sandbox')
+			chrome_options.add_argument('--disable-infobars')
 
-		# Execute stealth scripts
-		driver.execute_cdp_cmd(
-			'Page.addScriptToEvaluateOnNewDocument',
-			{
-				'source': """
-				Object.defineProperty(navigator, 'webdriver', {
-					get: () => undefined
-				});
-				
-				Object.defineProperty(navigator, 'languages', {
-					get: () => ['en-US', 'en']
-				});
-				
-				Object.defineProperty(navigator, 'plugins', {
-					get: () => [1, 2, 3, 4, 5]
-				});
-				
-				window.chrome = {
-					runtime: {}
-				};
-				
-				Object.defineProperty(navigator, 'permissions', {
-					get: () => ({
-						query: Promise.resolve.bind(Promise)
-					})
-				});
-			"""
-			},
-		)
+			# Initialize the Chrome driver with better error handling
+			service = ChromeService(ChromeDriverManager().install())
+			driver = webdriver.Chrome(service=service, options=chrome_options)
 
-		self.driver = driver
+			# Execute stealth scripts
+			driver.execute_cdp_cmd(
+				'Page.addScriptToEvaluateOnNewDocument',
+				{
+					'source': """
+					Object.defineProperty(navigator, 'webdriver', {
+						get: () => undefined
+					});
+					
+					Object.defineProperty(navigator, 'languages', {
+						get: () => ['en-US', 'en']
+					});
+					
+					Object.defineProperty(navigator, 'plugins', {
+						get: () => [1, 2, 3, 4, 5]
+					});
+					
+					window.chrome = {
+						runtime: {}
+					};
+					
+					Object.defineProperty(navigator, 'permissions', {
+						get: () => ({
+							query: Promise.resolve.bind(Promise)
+						})
+					});
+				"""
+				},
+			)
 
-		# driver.get('https://www.google.com')
+			self.driver = driver
+			return driver
 
-		return driver
+		except Exception as e:
+			logger.error(f'Failed to initialize Chrome driver: {str(e)}')
+			# Clean up any existing driver
+			if hasattr(self, 'driver') and self.driver:
+				try:
+					self.driver.quit()
+				except:
+					pass
+				self.driver = None
+			raise
 
 	def _get_driver(self) -> webdriver.Chrome:
 		if self.driver is None:

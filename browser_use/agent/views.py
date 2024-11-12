@@ -1,6 +1,7 @@
 from __future__ import annotations
 
-from typing import Any, Callable, ClassVar, Dict, ForwardRef, Optional, Type, Union
+from inspect import signature
+from typing import Any, Callable, ClassVar, Dict, Optional, Type
 
 from pydantic import BaseModel, create_model
 
@@ -56,32 +57,29 @@ class DynamicAgentOutput(ControllerActions):
 
 	custom_actions: Dict[str, Optional[Dict[str, Any]]] = {}
 
-	# Use ClassVar for class-level type hints with forward references
 	_cached_model: ClassVar[Optional[Type[DynamicAgentOutput]]] = None
-	_cached_output_model: ClassVar[Optional[Type[Output]]] = None
+	_cached_output_model: ClassVar[Optional[Type[BaseModel]]] = None
 
 	@classmethod
 	def get_or_create_models(
 		cls, custom_actions: Optional[list[CustomAction]] = None
-	) -> tuple[Type[DynamicAgentOutput], Type[Output]]:
+	) -> tuple[Type[DynamicAgentOutput], Type[BaseModel]]:
 		"""Gets or creates both dynamic models, caching them for reuse"""
 		if cls._cached_model is None or cls._cached_output_model is None:
-			# Create dynamic agent output model with custom actions
+			# Create dynamic agent output model
 			custom_fields: Dict[str, tuple[Type, Any]] = {
 				action.name: (Optional[Dict[str, Any]], None) for action in (custom_actions or [])
 			}
 
-			# Create the dynamic action model
 			cls._cached_model = create_model(
 				'DynamicAgentOutputWithActions', __base__=cls, **custom_fields
 			)
 
-			# Create the combined output model
+			# Create output model after agent output model
 			cls._cached_output_model = create_model(
 				'DynamicOutput',
 				current_state=(AgentState, ...),
 				action=(cls._cached_model, ...),
-				__base__=Output,
 			)
 
 		return cls._cached_model, cls._cached_output_model
@@ -89,7 +87,7 @@ class DynamicAgentOutput(ControllerActions):
 
 class Output(BaseModel):
 	current_state: AgentState
-	action: DynamicAgentOutput  # Forward reference works now due to __future__ import
+	action: DynamicAgentOutput
 
 
 class ClickElementControllerHistoryItem(ClickElementControllerAction):

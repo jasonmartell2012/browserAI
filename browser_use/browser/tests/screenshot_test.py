@@ -1,4 +1,5 @@
 import base64
+
 import pytest
 
 from browser_use.browser.service import BrowserService

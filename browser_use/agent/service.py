@@ -44,17 +44,26 @@ class AgentService:
 
 		Args:
 			task (str): Task to be performed.
-			llm (AvailableModel): Model to be used.
+			llm (BaseChatModel): Model to be used.
 			controller (ControllerService | None): You can reuse an existing or (automatically) create a new one.
 		"""
 		self.task = task
 		self.use_vision = use_vision
 		self.custom_actions = {action.name: action for action in (custom_actions or [])}
 
+		# Get or create dynamic models with proper typing first
+		self.AgentOutputClass: Type[DynamicAgentOutput]
+		self.OutputClass: Type[Output]
+		self.AgentOutputClass, self.OutputClass = DynamicAgentOutput.get_or_create_models(
+			custom_actions
+		)
+
+		# Then initialize controller and prompts
 		self.controller_injected = controller is not None
 		self.controller = controller or ControllerService()
-
 		self.llm = llm
+
+		# Now we can safely get the action description
 		system_prompt = AgentSystemPrompt(
 			task, default_action_description=self._get_action_description()
 		).get_system_message()
@@ -70,12 +79,14 @@ class AgentService:
 
 		self.action_history: list[AgentHistory] = []
 
-		# Get or create dynamic models with proper typing
-		self.AgentOutputClass: Type[DynamicAgentOutput]
-		self.OutputClass: Type[Output]
-		self.AgentOutputClass, self.OutputClass = DynamicAgentOutput.get_or_create_models(
-			custom_actions
-		)
+	def _get_action_description(self) -> str:
+		base_description = self.AgentOutputClass.description()
+		if self.custom_actions:
+			custom_descriptions = '\nCustom Actions:\n' + '\n'.join(
+				action.get_prompt_description() for action in self.custom_actions.values()
+			)
+			return base_description + custom_descriptions
+		return base_description
 
 	async def run(self, max_steps: int = 100):
 		"""
@@ -169,15 +180,6 @@ class AgentService:
 		self._save_conversation(input_messages, response)
 
 		return response.action
-
-	def _get_action_description(self) -> str:
-		base_description = self.AgentOutputClass.description()
-		if self.custom_actions:
-			custom_descriptions = '\nCustom Actions:\n' + '\n'.join(
-				action.get_prompt_description() for action in self.custom_actions.values()
-			)
-			return base_description + custom_descriptions
-		return base_description
 
 	def _save_conversation(self, input_messages: list[BaseMessage], response: Output):
 		if self.save_conversation_path is not None:
