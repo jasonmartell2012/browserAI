@@ -44,7 +44,6 @@ class CustomAction(BaseModel):
 			return ActionResult(done=False, error=str(e))
 
 	def get_prompt_description(self) -> str:
-		"""Generate description for system prompt"""
 		sig = signature(self.function)
 		params = {name: param.annotation.__name__ for name, param in sig.parameters.items()}
 		param_str = ', '.join(f'"{k}": "{v}"' for k, v in params.items())
@@ -53,37 +52,41 @@ class CustomAction(BaseModel):
 		return total
 
 
-class AgentAction(ControllerActions):
-	"""Base class for dynamic agent output that extends ControllerActions"""
+class CustomActionsHelper(BaseModel):
+	"""Container for custom actions"""
 
-	custom_actions: Dict[str, Optional[Dict[str, Any]]] = {}
-
-	_cached_model: ClassVar[Optional[Type[AgentAction]]] = None
-	_cached_output_model: ClassVar[Optional[Type[BaseModel]]] = None
+	custom_actions: Dict[str, CustomAction] = {}
+	_cached_model: ClassVar[Optional[Type[CustomActionsHelper]]] = None
 
 	@classmethod
 	def get_or_create_models(
 		cls, custom_actions: Optional[list[CustomAction]] = None
-	) -> tuple[Type[AgentAction], Type[BaseModel]]:
-		"""Gets or creates both dynamic models, caching them for reuse"""
-		if cls._cached_model is None or cls._cached_output_model is None:
-			# Create dynamic agent output model
+	) -> Type[CustomActionsHelper]:
+		"""Creates or returns cached model with custom actions"""
+		if cls._cached_model is None:
+			# Create fields for custom actions
 			custom_fields: Dict[str, tuple[Type, Any]] = {
 				action.name: (Optional[Dict[str, Any]], None) for action in (custom_actions or [])
 			}
 
+			# Create model with custom action fields and store custom_actions
 			cls._cached_model = create_model(
-				'AgentActionWithActions', __base__=cls, **custom_fields
+				'CustomActions',
+				__base__=cls,
+				custom_actions=(
+					Dict[str, CustomAction],
+					{action.name: action for action in (custom_actions or [])},
+				),
+				**custom_fields,
 			)
 
-			# Create output model after agent output model
-			cls._cached_output_model = create_model(
-				'AgentOutput',
-				current_state=(AgentState, ...),
-				action=(cls._cached_model, ...),
-			)
+		return cls._cached_model
 
-		return cls._cached_model, cls._cached_output_model
+
+class AgentAction(ControllerActions, CustomActionsHelper):
+	"""Combined class that inherits both controller and custom actions"""
+
+	pass
 
 
 class Output(BaseModel):

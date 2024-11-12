@@ -15,6 +15,7 @@ from browser_use.agent.views import (
 	AgentState,
 	ClickElementControllerHistoryItem,
 	CustomAction,
+	CustomActionsHelper,
 	InputTextControllerHistoryItem,
 	Output,
 )
@@ -52,9 +53,8 @@ class AgentService:
 		self.custom_actions = {action.name: action for action in (custom_actions or [])}
 
 		# Get or create dynamic models with proper typing first
-		self.AgentOutputClass: Type[AgentAction]
-		self.OutputClass: Type[Output]
-		self.AgentOutputClass, self.OutputClass = AgentAction.get_or_create_models(custom_actions)
+
+		self.CustomActions = CustomActionsHelper.get_or_create_models(custom_actions)
 
 		# Then initialize controller and prompts
 		self.controller_injected = controller is not None
@@ -78,7 +78,8 @@ class AgentService:
 		self.action_history: list[AgentHistory] = []
 
 	def _get_action_description(self) -> str:
-		base_description = self.AgentOutputClass.description()
+		base_description = ControllerActions.description()
+
 		if self.custom_actions:
 			custom_descriptions = '\n'.join(
 				action.get_prompt_description() for action in self.custom_actions.values()
@@ -118,7 +119,7 @@ class AgentService:
 		if isinstance(action, ControllerActions):
 			result = self.controller.act(action)
 		# Handle custom actions
-		elif isinstance(action, self.OutputClass):
+		elif isinstance(action, AgentAction):
 			result = action.execute()
 		else:
 			result = ActionResult(done=False, error=f'Invalid action type: {action}')
@@ -162,7 +163,7 @@ class AgentService:
 		input_messages = self.messages + [new_message]
 
 		# Use the dynamic output class
-		structured_llm = self.llm.with_structured_output(self.OutputClass)
+		structured_llm = self.llm.with_structured_output(Output)
 		response: Output = await structured_llm.ainvoke(input_messages)
 
 		# Only append the output message
