@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from inspect import signature
-from typing import Any, Callable, ClassVar, Dict, Optional, Type
+from typing import Any, Callable, ClassVar, Dict, Optional, Type, TypeVar
 
 from pydantic import BaseModel, ConfigDict, create_model
 
@@ -11,39 +11,49 @@ from browser_use.controller.views import (
 	InputTextControllerAction,
 )
 
-
-class AgentState(BaseModel):
-	valuation_previous_goal: str
-	memory: str
-	next_goal: str
+T = TypeVar('T', bound='DynamicActions')
 
 
-class ActionResult(BaseModel):
-	done: bool
-	extracted_content: Optional[str] = None
-	error: Optional[str] = None
+class CustomActionRegistry:
+	"""Registry for custom actions that can be used by the agent"""
+
+	_actions: Dict[str, tuple[str, Callable]] = {}
+
+	@classmethod
+	def register(cls, description: str):
+		"""Decorator to register custom actions with their descriptions"""
+
+		def decorator(func: Callable):
+			cls._actions[func.__name__] = (description, func)
+			return func
+
+		return decorator
+
+	@classmethod
+	def get_registered_actions(cls) -> list[CustomAction]:
+		"""Get all registered actions as CustomAction instances"""
+		return [
+			CustomAction(description=desc, function=func)
+			for func_name, (desc, func) in cls._actions.items()
+		]
 
 
 class CustomAction(BaseModel):
-	"""Base model for custom actions"""
+	"""Model for custom actions with their metadata"""
 
 	name: str
 	description: str
 	prompt_description: str = ''
-
-	# Store function outside of model fields
 	_function: ClassVar[Dict[str, Callable]] = {}
 
 	model_config = ConfigDict(arbitrary_types_allowed=True)
 
 	def __init__(self, description: str, function: Callable, **kwargs):
-		# Generate prompt description before super().__init__
 		sig = signature(function)
 		params = {name: param.annotation.__name__ for name, param in sig.parameters.items()}
 		param_str = ', '.join(f'"{k}": "{v}"' for k, v in params.items())
 		prompt_desc = f'- {description}:\n{{"{function.__name__}": {{{param_str}}}}}'
 
-		# Store function in class variable
 		self._function[function.__name__] = function
 
 		super().__init__(
@@ -55,59 +65,68 @@ class CustomAction(BaseModel):
 
 	def execute(self, params: dict) -> ActionResult:
 		try:
-			# Use stored function
 			func = self._function[self.name]
 			result = func(**params)
-			return ActionResult(done=False, extracted_content=str(result) if result else None)
+			return ActionResult(extracted_content=str(result) if result else None)
 		except Exception as e:
-			return ActionResult(done=False, error=str(e))
+			return ActionResult(error=str(e))
+
+
+class ActionResult(BaseModel):
+	"""Result of executing an action"""
+
+	done: Optional[bool] = False
+	extracted_content: Optional[str] = None
+	error: Optional[str] = None
+
+
+class AgentState(BaseModel):
+	"""Current state of the agent"""
+
+	valuation_previous_goal: str
+	memory: str
+	next_goal: str
 
 
 class DynamicActions(BaseModel):
-	"""Base class that combines controller and custom actions"""
+	"""Base class combining controller and custom actions"""
 
 	_cached_model: ClassVar[Optional[Type[DynamicActions]]] = None
-	_custom_actions: ClassVar[Dict[str, CustomAction]] = {}  # Store custom actions
+	_custom_actions: ClassVar[Dict[str, CustomAction]] = {}
 
 	@classmethod
 	def get_or_create_model(
-		cls, custom_actions: Optional[list[CustomAction]] = None
-	) -> Type[DynamicActions]:
+		cls: Type[T], custom_actions: Optional[list[CustomAction]] = None
+	) -> Type[T]:
+		"""Create or return cached model with combined actions"""
 		if cls._cached_model is None:
-			# Store custom actions for later use
-			cls._custom_actions = {action.name: action for action in (custom_actions or [])}
+			custom_actions = custom_actions or CustomActionRegistry.get_registered_actions()
+			cls._custom_actions = {action.name: action for action in custom_actions}
 
-			# Get all fields from ControllerActions
 			controller_fields = {
 				name: (field.annotation, field.default)
 				for name, field in ControllerActions.model_fields.items()
 			}
 
-			# Add custom action fields at the same level
 			custom_fields = {
-				action.name: (Optional[Dict[str, Any]], None) for action in (custom_actions or [])
+				action.name: (Optional[Dict[str, Any]], None) for action in custom_actions
 			}
 
-			# Combine all fields
-			all_fields = {**controller_fields, **custom_fields}
-
-			# Create the combined model
-			cls._cached_model = create_model('DynamicActions', __base__=cls, **all_fields)
+			cls._cached_model = create_model(
+				'DynamicActions', __base__=cls, **{**controller_fields, **custom_fields}
+			)
 
 		return cls._cached_model
 
 	def is_controller_action(self) -> bool:
-		"""Check if any controller action is set"""
 		return any(
 			getattr(self, field_name) is not None for field_name in ControllerActions.model_fields
 		)
 
 	def is_custom_action(self) -> bool:
-		"""Check if any custom action is set"""
 		return any(getattr(self, action_name) is not None for action_name in self._custom_actions)
 
 	def get_custom_action_and_params(self) -> tuple[CustomAction, dict]:
-		"""Get the active custom action and its parameters"""
 		for action_name, action in self._custom_actions.items():
 			params = getattr(self, action_name)
 			if params is not None:
@@ -121,6 +140,7 @@ class AgentAction(DynamicActions, ControllerActions):
 	pass
 
 
+# History models
 class ClickElementControllerHistoryItem(ClickElementControllerAction):
 	xpath: str | None
 
@@ -143,17 +163,15 @@ class DynamicOutput:
 	@classmethod
 	def get_or_create_model(cls, action_model: Type[DynamicActions]) -> Type[BaseModel]:
 		if cls._cached_model is None:
-			# Create the combined action type that includes both dynamic and controller actions
 			combined_action = create_model(
 				'CombinedAction',
-				__base__=(action_model, ControllerActions),  # Inherit from both
+				__base__=(action_model, ControllerActions),
 			)
 
-			# Create the output model with the combined action type
 			cls._cached_model = create_model(
 				'Output',
 				current_state=(AgentState, ...),
-				action=(combined_action, ...),  # Use combined action type
+				action=(combined_action, ...),
 			)
 
 		return cls._cached_model

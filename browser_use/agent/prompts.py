@@ -41,11 +41,11 @@ class AgentSystemPrompt:
 	You have to respond in the following RESPONSE FORMAT: 
 	{RESPONSE_FORMAT}
 
-	Example:
-	{EXAMPLE_RESPONSE}
-
 	Your AVAILABLE ACTIONS:
     {self.default_action_description}
+
+	Example:
+	{EXAMPLE_RESPONSE}
 
 
 	IMPORTANT RULES:
