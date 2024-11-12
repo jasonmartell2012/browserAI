@@ -118,14 +118,15 @@ class AgentService:
 		action = await self.get_next_action(state)
 
 		# Handle controller actions
-		if isinstance(action, ControllerActions):
+		if action.is_controller_action():
 			result = self.controller.act(action)
 		# Handle custom actions
-		elif isinstance(action, self.DynamicActions):
-			result = action.execute()
+		elif action.is_custom_action():
+			custom_action, params = action.get_custom_action_and_params()
+			result = custom_action.execute(params)
 		else:
-			result = ActionResult(done=False, error=f'Invalid action type: {action}')
-			logger.error(f'Invalid action type: {action}')
+			result = ActionResult(done=False, error=f'No valid action found: {action}')
+			logger.error(f'No valid action found: {action}')
 
 		# Update history
 		history_item = self._make_history_item(action, state)

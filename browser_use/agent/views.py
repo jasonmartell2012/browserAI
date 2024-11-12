@@ -65,12 +65,16 @@ class DynamicActions(BaseModel):
 	"""Base class that combines controller and custom actions"""
 
 	_cached_model: ClassVar[Optional[Type[DynamicActions]]] = None
+	_custom_actions: ClassVar[Dict[str, CustomAction]] = {}  # Store custom actions
 
 	@classmethod
 	def get_or_create_model(
 		cls, custom_actions: Optional[list[CustomAction]] = None
 	) -> Type[DynamicActions]:
 		if cls._cached_model is None:
+			# Store custom actions for later use
+			cls._custom_actions = {action.name: action for action in (custom_actions or [])}
+
 			# Get all fields from ControllerActions
 			controller_fields = {
 				name: (field.annotation, field.default)
@@ -89,6 +93,24 @@ class DynamicActions(BaseModel):
 			cls._cached_model = create_model('DynamicActions', __base__=cls, **all_fields)
 
 		return cls._cached_model
+
+	def is_controller_action(self) -> bool:
+		"""Check if any controller action is set"""
+		return any(
+			getattr(self, field_name) is not None for field_name in ControllerActions.model_fields
+		)
+
+	def is_custom_action(self) -> bool:
+		"""Check if any custom action is set"""
+		return any(getattr(self, action_name) is not None for action_name in self._custom_actions)
+
+	def get_custom_action_and_params(self) -> tuple[CustomAction, dict]:
+		"""Get the active custom action and its parameters"""
+		for action_name, action in self._custom_actions.items():
+			params = getattr(self, action_name)
+			if params is not None:
+				return action, params
+		raise ValueError('No custom action found')
 
 
 class AgentAction(DynamicActions, ControllerActions):
