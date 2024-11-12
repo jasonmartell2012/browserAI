@@ -46,24 +46,25 @@ class CustomAction(BaseModel):
 	def get_prompt_description(self) -> str:
 		"""Generate description for system prompt"""
 		sig = signature(self.function)
-		params = ', '.join(
-			f'{name}: {param.annotation.__name__}' for name, param in sig.parameters.items()
-		)
-		return f'- {self.name} ({params}):\n   {self.description}'
+		params = {name: param.annotation.__name__ for name, param in sig.parameters.items()}
+		param_str = ', '.join(f'"{k}": "{v}"' for k, v in params.items())
+		total = f'- {self.description}:\n{{"{self.name}": {{{param_str}}}}}'
+
+		return total
 
 
-class DynamicAgentOutput(ControllerActions):
+class AgentAction(ControllerActions):
 	"""Base class for dynamic agent output that extends ControllerActions"""
 
 	custom_actions: Dict[str, Optional[Dict[str, Any]]] = {}
 
-	_cached_model: ClassVar[Optional[Type[DynamicAgentOutput]]] = None
+	_cached_model: ClassVar[Optional[Type[AgentAction]]] = None
 	_cached_output_model: ClassVar[Optional[Type[BaseModel]]] = None
 
 	@classmethod
 	def get_or_create_models(
 		cls, custom_actions: Optional[list[CustomAction]] = None
-	) -> tuple[Type[DynamicAgentOutput], Type[BaseModel]]:
+	) -> tuple[Type[AgentAction], Type[BaseModel]]:
 		"""Gets or creates both dynamic models, caching them for reuse"""
 		if cls._cached_model is None or cls._cached_output_model is None:
 			# Create dynamic agent output model
@@ -72,12 +73,12 @@ class DynamicAgentOutput(ControllerActions):
 			}
 
 			cls._cached_model = create_model(
-				'DynamicAgentOutputWithActions', __base__=cls, **custom_fields
+				'AgentActionWithActions', __base__=cls, **custom_fields
 			)
 
 			# Create output model after agent output model
 			cls._cached_output_model = create_model(
-				'DynamicOutput',
+				'AgentOutput',
 				current_state=(AgentState, ...),
 				action=(cls._cached_model, ...),
 			)
@@ -87,7 +88,7 @@ class DynamicAgentOutput(ControllerActions):
 
 class Output(BaseModel):
 	current_state: AgentState
-	action: DynamicAgentOutput
+	action: AgentAction
 
 
 class ClickElementControllerHistoryItem(ClickElementControllerAction):
@@ -98,7 +99,7 @@ class InputTextControllerHistoryItem(InputTextControllerAction):
 	xpath: str | None
 
 
-class AgentHistory(DynamicAgentOutput):
+class AgentHistory(AgentAction):
 	click_element: Optional[ClickElementControllerHistoryItem] = None
 	input_text: Optional[InputTextControllerHistoryItem] = None
 	url: str

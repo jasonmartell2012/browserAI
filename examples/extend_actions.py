@@ -27,12 +27,12 @@ def read_jobs_from_file() -> str:
 
 
 custom_actions = [
-	CustomAction(description='Read jobs from file', function=read_jobs_from_file),
+	CustomAction(description='Read jobs from file you saved before', function=read_jobs_from_file),
 	CustomAction(description='Save job details to file', function=save_job_to_file),
 ]
 
 
-task = 'Find 5 developer jobs in Zurich and save them to file. In the end read the file and return the content.'
+task = 'Find 5 developer jobs in Zurich and save each to a file. In the end read the file and return the content.'
 model = ChatOpenAI(model='gpt-4o')
 agent = AgentService(task, model, custom_actions=custom_actions)
 

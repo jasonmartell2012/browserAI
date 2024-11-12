@@ -10,11 +10,11 @@ from pydantic import create_model
 from browser_use.agent.prompts import AgentMessagePrompt, AgentSystemPrompt
 from browser_use.agent.views import (
 	ActionResult,
+	AgentAction,
 	AgentHistory,
 	AgentState,
 	ClickElementControllerHistoryItem,
 	CustomAction,
-	DynamicAgentOutput,
 	InputTextControllerHistoryItem,
 	Output,
 )
@@ -52,11 +52,9 @@ class AgentService:
 		self.custom_actions = {action.name: action for action in (custom_actions or [])}
 
 		# Get or create dynamic models with proper typing first
-		self.AgentOutputClass: Type[DynamicAgentOutput]
+		self.AgentOutputClass: Type[AgentAction]
 		self.OutputClass: Type[Output]
-		self.AgentOutputClass, self.OutputClass = DynamicAgentOutput.get_or_create_models(
-			custom_actions
-		)
+		self.AgentOutputClass, self.OutputClass = AgentAction.get_or_create_models(custom_actions)
 
 		# Then initialize controller and prompts
 		self.controller_injected = controller is not None
@@ -82,7 +80,7 @@ class AgentService:
 	def _get_action_description(self) -> str:
 		base_description = self.AgentOutputClass.description()
 		if self.custom_actions:
-			custom_descriptions = '\nCustom Actions:\n' + '\n'.join(
+			custom_descriptions = '\n'.join(
 				action.get_prompt_description() for action in self.custom_actions.values()
 			)
 			return base_description + custom_descriptions
@@ -120,7 +118,7 @@ class AgentService:
 		if isinstance(action, ControllerActions):
 			result = self.controller.act(action)
 		# Handle custom actions
-		elif isinstance(action, self.AgentOutputClass):
+		elif isinstance(action, self.OutputClass):
 			result = action.execute()
 		else:
 			result = ActionResult(done=False, error=f'Invalid action type: {action}')
@@ -132,9 +130,7 @@ class AgentService:
 
 		return history_item, result
 
-	def _make_history_item(
-		self, action: DynamicAgentOutput, state: ControllerPageState
-	) -> AgentHistory:
+	def _make_history_item(self, action: AgentAction, state: ControllerPageState) -> AgentHistory:
 		return AgentHistory(
 			search_google=action.search_google,
 			go_to_url=action.go_to_url,
@@ -160,7 +156,7 @@ class AgentService:
 		)
 
 	@time_execution_async('--get_next_action')
-	async def get_next_action(self, state: ControllerPageState) -> DynamicAgentOutput:
+	async def get_next_action(self, state: ControllerPageState) -> AgentAction:
 		new_message = AgentMessagePrompt(state).get_user_message()
 		logger.debug(f'current tabs: {state.tabs}')
 		input_messages = self.messages + [new_message]

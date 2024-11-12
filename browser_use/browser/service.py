@@ -46,9 +46,7 @@ class BrowserService:
 		    webdriver.Chrome: Configured Chrome WebDriver instance
 		"""
 		try:
-			os.system('pkill -f chromedriver')
-			os.system('pkill -f "Google Chrome"')
-
+			# if webdriver is not starting, try to kill it or rm -rf ~/.wdm
 			chrome_options = Options()
 			if self.headless:
 				chrome_options.add_argument('--headless=new')  # Updated headless argument
