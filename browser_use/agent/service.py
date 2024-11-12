@@ -1,6 +1,6 @@
 import json
 import logging
-from typing import Optional, Type
+from typing import Any, Optional, Type
 
 from dotenv import load_dotenv
 from langchain_core.language_models.chat_models import BaseChatModel
@@ -15,9 +15,9 @@ from browser_use.agent.views import (
 	AgentState,
 	ClickElementControllerHistoryItem,
 	CustomAction,
-	CustomActionsHelper,
+	DynamicActions,
+	DynamicOutput,
 	InputTextControllerHistoryItem,
-	Output,
 )
 from browser_use.controller.service import ControllerService
 from browser_use.controller.views import (
@@ -52,9 +52,11 @@ class AgentService:
 		self.use_vision = use_vision
 		self.custom_actions = {action.name: action for action in (custom_actions or [])}
 
-		# Get or create dynamic models with proper typing first
+		# Get dynamic action model
+		self.DynamicActions = DynamicActions.get_or_create_model(custom_actions)
 
-		self.CustomActions = CustomActionsHelper.get_or_create_models(custom_actions)
+		# Create dynamic output model with our actions
+		self.Output = DynamicOutput.get_or_create_model(self.DynamicActions)
 
 		# Then initialize controller and prompts
 		self.controller_injected = controller is not None
@@ -119,7 +121,7 @@ class AgentService:
 		if isinstance(action, ControllerActions):
 			result = self.controller.act(action)
 		# Handle custom actions
-		elif isinstance(action, AgentAction):
+		elif isinstance(action, self.DynamicActions):
 			result = action.execute()
 		else:
 			result = ActionResult(done=False, error=f'Invalid action type: {action}')
@@ -157,14 +159,14 @@ class AgentService:
 		)
 
 	@time_execution_async('--get_next_action')
-	async def get_next_action(self, state: ControllerPageState) -> AgentAction:
+	async def get_next_action(self, state: ControllerPageState) -> Any:
 		new_message = AgentMessagePrompt(state).get_user_message()
 		logger.debug(f'current tabs: {state.tabs}')
 		input_messages = self.messages + [new_message]
 
-		# Use the dynamic output class
-		structured_llm = self.llm.with_structured_output(Output)
-		response: Output = await structured_llm.ainvoke(input_messages)
+		# Use our dynamic output model
+		structured_llm = self.llm.with_structured_output(self.Output)
+		response: Any = await structured_llm.ainvoke(input_messages)
 
 		# Only append the output message
 		history_new_message = AgentMessagePrompt(state).get_message_for_history()
@@ -178,7 +180,7 @@ class AgentService:
 
 		return response.action
 
-	def _save_conversation(self, input_messages: list[BaseMessage], response: Output):
+	def _save_conversation(self, input_messages: list[BaseMessage], response):
 		if self.save_conversation_path is not None:
 			with open(self.save_conversation_path + f'_{self.n}.txt', 'w') as f:
 				# Write messages with proper formatting

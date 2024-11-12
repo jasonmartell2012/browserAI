@@ -61,49 +61,40 @@ class CustomAction(BaseModel):
 			return ActionResult(done=False, error=str(e))
 
 
-class CustomActionsHelper(BaseModel):
-	"""Container for custom actions"""
+class DynamicActions(BaseModel):
+	"""Base class that combines controller and custom actions"""
 
-	_custom_actions: Dict[str, CustomAction] = {}
-	_cached_model: ClassVar[Optional[Type[CustomActionsHelper]]] = None
-
-	model_config = ConfigDict(
-		arbitrary_types_allowed=True,
-		# Use list instead of set for excluded fields
-		json_schema_extra={'exclude': ['_custom_actions']},
-	)
+	_cached_model: ClassVar[Optional[Type[DynamicActions]]] = None
 
 	@classmethod
-	def get_or_create_models(
+	def get_or_create_model(
 		cls, custom_actions: Optional[list[CustomAction]] = None
-	) -> Type[CustomActionsHelper]:
+	) -> Type[DynamicActions]:
 		if cls._cached_model is None:
-			# Create fields for custom actions
-			custom_fields: Dict[str, tuple[Type, Any]] = {
+			# Get all fields from ControllerActions
+			controller_fields = {
+				name: (field.annotation, field.default)
+				for name, field in ControllerActions.model_fields.items()
+			}
+
+			# Add custom action fields at the same level
+			custom_fields = {
 				action.name: (Optional[Dict[str, Any]], None) for action in (custom_actions or [])
 			}
 
-			# Create model with custom action fields
-			cls._cached_model = create_model('CustomActions', __base__=cls, **custom_fields)
+			# Combine all fields
+			all_fields = {**controller_fields, **custom_fields}
 
-			# Store custom actions in private field
-			if custom_actions:
-				cls._cached_model._custom_actions = {
-					action.name: action for action in custom_actions
-				}
+			# Create the combined model
+			cls._cached_model = create_model('DynamicActions', __base__=cls, **all_fields)
 
 		return cls._cached_model
 
 
-class AgentAction(ControllerActions, CustomActionsHelper):
-	"""Combined class that inherits both controller and custom actions"""
+class AgentAction(DynamicActions, ControllerActions):
+	"""Concrete implementation of combined actions"""
 
 	pass
-
-
-class Output(BaseModel):
-	current_state: AgentState
-	action: AgentAction
 
 
 class ClickElementControllerHistoryItem(ClickElementControllerAction):
@@ -118,3 +109,27 @@ class AgentHistory(AgentAction):
 	click_element: Optional[ClickElementControllerHistoryItem] = None
 	input_text: Optional[InputTextControllerHistoryItem] = None
 	url: str
+
+
+class DynamicOutput:
+	"""Factory for creating Output models with dynamic actions"""
+
+	_cached_model: ClassVar[Optional[Type[BaseModel]]] = None
+
+	@classmethod
+	def get_or_create_model(cls, action_model: Type[DynamicActions]) -> Type[BaseModel]:
+		if cls._cached_model is None:
+			# Create the combined action type that includes both dynamic and controller actions
+			combined_action = create_model(
+				'CombinedAction',
+				__base__=(action_model, ControllerActions),  # Inherit from both
+			)
+
+			# Create the output model with the combined action type
+			cls._cached_model = create_model(
+				'Output',
+				current_state=(AgentState, ...),
+				action=(combined_action, ...),  # Use combined action type
+			)
+
+		return cls._cached_model
