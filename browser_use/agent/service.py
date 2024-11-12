@@ -82,7 +82,7 @@ class AgentService:
 
 		if self.custom_actions:
 			custom_descriptions = '\n'.join(
-				action.get_prompt_description() for action in self.custom_actions.values()
+				action.prompt_description for action in self.custom_actions.values()
 			)
 			return base_description + custom_descriptions
 		return base_description
