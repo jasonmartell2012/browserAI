@@ -18,5 +18,21 @@
                 "PYTHONPATH": "${workspaceFolder}"
             }
         },
+        {
+            "name": "Python: Debug Captcha Tests",
+            "type": "python",
+            "request": "launch",
+            "module": "pytest",
+            "args": [
+                "tests/test_agent_actions.py",
+                "-v",
+                "-k",
+                "test_captcha_solver",
+                "--capture=no",
+                "--log-cli-level=INFO"
+            ],
+            "console": "integratedTerminal",
+            "justMyCode": false
+        }
     ]
 }

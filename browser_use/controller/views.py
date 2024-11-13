@@ -62,10 +62,10 @@ class ControllerActions(BaseModel):
    {"nothing": true}
 - Go back:
    {"go_back": true}
-- Click an interactive element by its given ID and number how many times you want to click it (default is 1):
-   {"click_element": {"id": 1, "num_clicks": 2}}
-- Input text into an interactive element by its ID:
-   {"input_text": {"id": 1, "text": "Your text"}}
+- Click an interactive element by its given index and specify how many times you want to click it if multiple clicks are possible (default is 1):
+   {"click_element": {"index": 1, "num_clicks": 2}}
+- Input text into an interactive element by its index:
+   {"input_text": {"index": 1, "text": "Your text"}}
 - Get page content:
    {"extract_page_content": true}
 - Open new tab:

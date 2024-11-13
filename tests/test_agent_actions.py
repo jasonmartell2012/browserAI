@@ -163,15 +163,16 @@ class CaptchaTest(BaseModel):
 @pytest.mark.parametrize(
 	'captcha',
 	[
-		CaptchaTest(
-			name='Text Captcha',
-			url='https://2captcha.com/demo/text',
-			success_text='Captcha is passed successfully!',
-		),
+		# good test for num_clicks
 		CaptchaTest(
 			name='Rotate Captcha',
 			url='https://2captcha.com/demo/rotatecaptcha',
 			success_text='Captcha is passed successfully',
+		),
+		CaptchaTest(
+			name='Text Captcha',
+			url='https://2captcha.com/demo/text',
+			success_text='Captcha is passed successfully!',
 		),
 		CaptchaTest(
 			name='Basic Captcha',
