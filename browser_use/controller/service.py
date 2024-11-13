@@ -73,7 +73,7 @@ class ControllerService:
 				self.browser.go_back()
 			elif action.done:
 				self.browser.done(action.done.text)
-				return ActionResult(done=True, extracted_content=action.done.text)
+				return ActionResult(is_done=True, extracted_content=action.done.text)
 			elif action.click_element:
 				self.browser.click_element_by_index(
 					action.click_element.id, current_state, action.click_element.num_clicks
@@ -84,11 +84,11 @@ class ControllerService:
 				)
 			elif action.extract_page_content:
 				content = self.browser.extract_page_content()
-				return ActionResult(done=False, extracted_content=content)
+				return ActionResult(is_done=False, extracted_content=content)
 			else:
 				raise ValueError(f'Unknown action: {action}')
 
-			return ActionResult(done=False)
+			return ActionResult(is_done=False)
 
 		except Exception as e:
-			return ActionResult(done=False, error=f'Error executing action: {str(e)}')
+			return ActionResult(is_done=False, error=f'Error executing action: {str(e)}')

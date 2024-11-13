@@ -8,6 +8,7 @@ from pydantic import BaseModel, ConfigDict, create_model
 from browser_use.controller.views import (
 	ClickElementControllerAction,
 	ControllerActions,
+	ControllerPageState,
 	InputTextControllerAction,
 )
 
@@ -75,7 +76,7 @@ class CustomAction(BaseModel):
 class ActionResult(BaseModel):
 	"""Result of executing an action"""
 
-	done: Optional[bool] = False
+	is_done: Optional[bool] = False
 	extracted_content: Optional[str] = None
 	error: Optional[str] = None
 
@@ -149,29 +150,39 @@ class InputTextControllerHistoryItem(InputTextControllerAction):
 	xpath: str | None
 
 
-class AgentHistory(AgentAction):
-	click_element: Optional[ClickElementControllerHistoryItem] = None
-	input_text: Optional[InputTextControllerHistoryItem] = None
-	url: str
-
-
-class DynamicOutput:
+class DynamicOutput(BaseModel):
 	"""Factory for creating Output models with dynamic actions"""
 
 	_cached_model: ClassVar[Optional[Type[BaseModel]]] = None
 
+	model_config = ConfigDict(arbitrary_types_allowed=True)
+
 	@classmethod
 	def get_or_create_model(cls, action_model: Type[DynamicActions]) -> Type[BaseModel]:
+		"""Create or get cached output model"""
 		if cls._cached_model is None:
+			# Create combined action model
 			combined_action = create_model(
 				'CombinedAction',
 				__base__=(action_model, ControllerActions),
 			)
 
+			# Create output model
 			cls._cached_model = create_model(
 				'Output',
+				__base__=BaseModel,  # Make it inherit from BaseModel
 				current_state=(AgentState, ...),
 				action=(combined_action, ...),
 			)
 
 		return cls._cached_model
+
+
+class AgentHistory(BaseModel):
+	"""History item for agent actions"""
+
+	model_output: BaseModel  # Change from Type[DynamicOutput] to BaseModel
+	result: ActionResult
+	state: ControllerPageState
+
+	model_config = ConfigDict(arbitrary_types_allowed=True)

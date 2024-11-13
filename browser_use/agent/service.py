@@ -98,30 +98,30 @@ class AgentService:
 
 		return base_description + custom_descriptions if custom_descriptions else base_description
 
-	async def run(self, max_steps: int = 100) -> tuple[Optional[bool], list[AgentHistory]]:
+	async def run(self, max_steps: int = 100) -> list[AgentHistory]:
 		"""Execute the task with maximum number of steps"""
 		try:
 			logger.info(f'🚀 Starting task: {self.task}')
 
 			for i in range(max_steps):
-				action, result = await self.step()
+				history_item = await self.step()
 
-				if result.done:
+				if history_item.result.is_done:
 					logger.info('✅ Task completed successfully')
-					return action.done, self.action_history
+					return self.action_history
 
 			logger.info('❌ Failed to complete task in maximum steps')
-			return None, self.action_history
+			return self.action_history
 		finally:
 			if not self.controller_injected:
 				self.controller.browser.close()
 
 	@time_execution_async('--step')
-	async def step(self) -> tuple[AgentHistory, ActionResult]:
+	async def step(self) -> AgentHistory:
 		"""Execute one step of the task"""
 		state = self.controller.get_current_state(screenshot=self.use_vision)
-		action = await self.get_next_action(state)
-
+		model_output = await self.get_next_action(state)
+		action = model_output.action
 		# Handle controller actions
 		if action.is_controller_action():
 			result = self.controller.act(action)
@@ -131,7 +131,7 @@ class AgentService:
 			custom_action, params = action.get_custom_action_and_params()
 			result = custom_action.execute(params)
 		else:
-			result = ActionResult(done=False, error=f'No valid action found: {action}')
+			result = ActionResult(is_done=False, error=f'No valid action found: {action}')
 			logger.error(f'No valid action found: {action}')
 
 		# include result in model
@@ -141,39 +141,19 @@ class AgentService:
 			self.messages.append(HumanMessage(content=result.error))
 
 		# Update history
-		history_item = self._make_history_item(action, state)
+		history_item = self._make_history_item(model_output, state, result)
 		self.action_history.append(history_item)
 
-		return history_item, result
+		return history_item
 
-	def _make_history_item(self, action: AgentAction, state: ControllerPageState) -> AgentHistory:
+	def _make_history_item(
+		self, model_output: DynamicOutput, state: ControllerPageState, result: ActionResult
+	) -> AgentHistory:
 		"""Create history item from action and state"""
-		return AgentHistory(
-			search_google=action.search_google,
-			go_to_url=action.go_to_url,
-			nothing=action.nothing,
-			go_back=action.go_back,
-			done=action.done,
-			click_element=ClickElementControllerHistoryItem(
-				id=action.click_element.id, xpath=state.selector_map.get(action.click_element.id)
-			)
-			if action.click_element and state.selector_map.get(action.click_element.id)
-			else None,
-			input_text=InputTextControllerHistoryItem(
-				id=action.input_text.id,
-				xpath=state.selector_map.get(action.input_text.id),
-				text=action.input_text.text,
-			)
-			if action.input_text and state.selector_map.get(action.input_text.id)
-			else None,
-			extract_page_content=action.extract_page_content,
-			switch_tab=action.switch_tab,
-			open_tab=action.open_tab,
-			url=state.url,
-		)
+		return AgentHistory(model_output=model_output, result=result, state=state)
 
 	@time_execution_async('--get_next_action')
-	async def get_next_action(self, state: ControllerPageState) -> AgentAction:
+	async def get_next_action(self, state: ControllerPageState) -> Any:
 		"""Get next action from LLM based on current state"""
 		new_message = AgentMessagePrompt(state).get_user_message()
 		logger.debug(f'current tabs: {state.tabs}')
@@ -195,7 +175,7 @@ class AgentService:
 
 		self._save_conversation(input_messages, response)
 
-		return response.action
+		return response
 
 	def _save_conversation(self, input_messages: list[BaseMessage], response: Any) -> None:
 		"""Save conversation history to file if path is specified"""
