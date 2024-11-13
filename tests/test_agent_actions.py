@@ -1,5 +1,6 @@
 import pytest
 from langchain_openai import ChatOpenAI
+from pydantic import BaseModel
 
 from browser_use.agent.service import AgentService
 from browser_use.agent.views import ActionResult
@@ -151,36 +152,43 @@ async def test_agent_finds_installation_command(llm, agent_with_controller):
 	assert install_command_action is not None
 
 
+class CaptchaTest(BaseModel):
+	name: str
+	url: str
+	success_text: str
+
+
+# pytest tests/test_agent_actions.py -v -k "test_captcha_solver" --capture=no --log-cli-level=INFO
 @pytest.mark.asyncio
 @pytest.mark.parametrize(
-	'captcha_test',
+	'captcha',
 	[
-		{
-			'name': 'Text Captcha',
-			'url': 'https://2captcha.com/demo/text',
-			'success_text': 'Captcha is passed successfully!',
-		},
-		{
-			'name': 'Rotate Captcha',
-			'url': 'https://2captcha.com/demo/rotatecaptcha',
-			'success_text': 'Captcha is passed successfully',
-		},
-		{
-			'name': 'Basic Captcha',
-			'url': 'https://captcha.com/demos/features/captcha-demo.aspx',
-			'success_text': 'Correct!',
-		},
-		{
-			'name': 'MT Captcha',
-			'url': 'https://2captcha.com/demo/mtcaptcha',
-			'success_text': 'Verified Successfully',
-		},
+		CaptchaTest(
+			name='Text Captcha',
+			url='https://2captcha.com/demo/text',
+			success_text='Captcha is passed successfully!',
+		),
+		CaptchaTest(
+			name='Rotate Captcha',
+			url='https://2captcha.com/demo/rotatecaptcha',
+			success_text='Captcha is passed successfully',
+		),
+		CaptchaTest(
+			name='Basic Captcha',
+			url='https://captcha.com/demos/features/captcha-demo.aspx',
+			success_text='Correct!',
+		),
+		CaptchaTest(
+			name='MT Captcha',
+			url='https://2captcha.com/demo/mtcaptcha',
+			success_text='Verified Successfully',
+		),
 	],
 )
-async def test_captcha_solver(llm, agent_with_controller, captcha_test):
+async def test_captcha_solver(llm, agent_with_controller, captcha: CaptchaTest):
 	"""Test agent's ability to solve different types of captchas"""
 	agent = AgentService(
-		task=f'Go to {captcha_test["url"]} and solve the captcha',
+		task=f'Go to {captcha.url} and solve the captcha',
 		llm=llm,
 		controller=agent_with_controller,
 	)
@@ -188,7 +196,7 @@ async def test_captcha_solver(llm, agent_with_controller, captcha_test):
 	history = await agent.run(max_steps=10)
 
 	# Verify the agent solved the captcha
-	captcha_solved_action = next(
-		(h for h in history if captcha_test['success_text'] in h.state.page_content), None
-	)
-	assert captcha_solved_action is not None, f'Failed to solve {captcha_test["name"]}'
+
+	last = history[-1].state.items
+	solved = any([captcha.success_text in item.text for item in last])
+	assert solved, f'Failed to solve {captcha.name}'
