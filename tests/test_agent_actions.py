@@ -34,12 +34,13 @@ async def test_ecommerce_interaction(llm, agent_with_controller):
 	# Verify sequence of actions
 	action_sequence = []
 	for h in history:
-		if getattr(h.model_output.action, 'go_to_url', None):
+		action = getattr(h.model_output, 'action', None)
+		if action and getattr(action, 'go_to_url', None):
 			action_sequence.append('navigate')
-		elif getattr(h.model_output.action, 'input_text', None):
+		elif action and getattr(action, 'input_text', None):
 			action_sequence.append('input')
 			# Check that the input is 'laptop'
-			inp = h.model_output.action.input_text.text.lower()
+			inp = action.input_text.text.lower()
 			if inp == 'laptop':
 				action_sequence.append('input_exact_correct')
 			elif 'laptop' in inp:
@@ -47,8 +48,12 @@ async def test_ecommerce_interaction(llm, agent_with_controller):
 			else:
 				action_sequence.append('incorrect_input')
 
-		elif getattr(h.model_output.action, 'click_element', None):
+		elif action and getattr(action, 'click_element', None):
 			action_sequence.append('click')
+
+		if action is None:
+			print(h.result)
+			print(h.model_output)
 
 	# Verify essential steps were performed
 	assert 'navigate' in action_sequence  # Navigated to Amazon
@@ -77,7 +82,8 @@ async def test_error_recovery(llm, agent_with_controller):
 		(
 			h
 			for h in history
-			if getattr(h.model_output.action, 'go_to_url', None)
+			if getattr(h.model_output, 'action', None)
+			and getattr(h.model_output.action, 'go_to_url', None)
 			and 'google.com' in h.model_output.action.go_to_url.url
 		),
 		None,
@@ -101,7 +107,8 @@ async def test_find_contact_email(llm, agent_with_controller):
 		(
 			h
 			for h in history
-			if getattr(h.model_output.action, 'go_to_url', None)
+			if getattr(h.model_output, 'action', None)
+			and getattr(h.model_output.action, 'go_to_url', None)
 			and 'browser-use.com' in h.model_output.action.go_to_url.url
 		),
 		None,
@@ -110,7 +117,12 @@ async def test_find_contact_email(llm, agent_with_controller):
 
 	# Verify the agent found the contact email
 	email_action = next(
-		(h for h in history if 'info@browser-use.com' in h.result.extracted_content), None
+		(
+			h
+			for h in history
+			if h.result.extracted_content and 'info@browser-use.com' in h.result.extracted_content
+		),
+		None,
 	)
 	assert email_action is not None
 
@@ -119,7 +131,7 @@ async def test_find_contact_email(llm, agent_with_controller):
 async def test_agent_finds_installation_command(llm, agent_with_controller):
 	"""Test agent's ability to find the pip installation command for browser-use on the web"""
 	agent = AgentService(
-		task='Find the pip installation command for the browser use repo',
+		task='Find the pip installation command for the browser-use repo',
 		llm=llm,
 		controller=agent_with_controller,
 	)
@@ -128,6 +140,55 @@ async def test_agent_finds_installation_command(llm, agent_with_controller):
 
 	# Verify the agent found the correct installation command
 	install_command_action = next(
-		(h for h in history if 'pip install browser-use' in h.result.extracted_content), None
+		(
+			h
+			for h in history
+			if h.result.extracted_content
+			and 'pip install browser-use' in h.result.extracted_content
+		),
+		None,
 	)
 	assert install_command_action is not None
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
+	'captcha_test',
+	[
+		{
+			'name': 'Text Captcha',
+			'url': 'https://2captcha.com/demo/text',
+			'success_text': 'Captcha is passed successfully!',
+		},
+		{
+			'name': 'Rotate Captcha',
+			'url': 'https://2captcha.com/demo/rotatecaptcha',
+			'success_text': 'Captcha is passed successfully',
+		},
+		{
+			'name': 'Basic Captcha',
+			'url': 'https://captcha.com/demos/features/captcha-demo.aspx',
+			'success_text': 'Correct!',
+		},
+		{
+			'name': 'MT Captcha',
+			'url': 'https://2captcha.com/demo/mtcaptcha',
+			'success_text': 'Verified Successfully',
+		},
+	],
+)
+async def test_captcha_solver(llm, agent_with_controller, captcha_test):
+	"""Test agent's ability to solve different types of captchas"""
+	agent = AgentService(
+		task=f'Go to {captcha_test["url"]} and solve the captcha',
+		llm=llm,
+		controller=agent_with_controller,
+	)
+
+	history = await agent.run(max_steps=10)
+
+	# Verify the agent solved the captcha
+	captcha_solved_action = next(
+		(h for h in history if captcha_test['success_text'] in h.state.page_content), None
+	)
+	assert captcha_solved_action is not None, f'Failed to solve {captcha_test["name"]}'

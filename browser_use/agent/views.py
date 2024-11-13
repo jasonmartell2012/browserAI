@@ -181,8 +181,8 @@ class DynamicOutput(BaseModel):
 class AgentHistory(BaseModel):
 	"""History item for agent actions"""
 
-	model_output: BaseModel  # Change from Type[DynamicOutput] to BaseModel
+	model_output: BaseModel
 	result: ActionResult
 	state: ControllerPageState
 
-	model_config = ConfigDict(arbitrary_types_allowed=True)
+	model_config = ConfigDict(arbitrary_types_allowed=True, protected_namespaces=())
