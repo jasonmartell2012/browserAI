@@ -15,7 +15,7 @@ from browser_use.controller.views import (
 T = TypeVar('T', bound='DynamicActions')
 
 
-class CustomActionRegistry:
+class Action:
 	"""Registry for custom actions that can be used by the agent"""
 
 	_actions: Dict[str, tuple[str, Callable]] = {}
@@ -101,7 +101,7 @@ class DynamicActions(BaseModel):
 	) -> Type[T]:
 		"""Create or return cached model with combined actions"""
 		if cls._cached_model is None:
-			custom_actions = custom_actions or CustomActionRegistry.get_registered_actions()
+			custom_actions = custom_actions or Action.get_registered_actions()
 			cls._custom_actions = {action.name: action for action in custom_actions}
 
 			controller_fields = {

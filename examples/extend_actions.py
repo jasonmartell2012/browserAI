@@ -13,23 +13,49 @@ import asyncio
 from langchain_openai import ChatOpenAI
 
 from browser_use.agent.service import AgentService
-from browser_use.agent.views import CustomActionRegistry
+from browser_use.agent.views import Action
 
 
-@CustomActionRegistry.register(description='Save job details to file')
+@Action.register(description='Save job details to file')
 def save_job_to_file(title: str, link: str, company: str, salary: str) -> None:
 	with open('jobs.txt', 'a') as f:
 		f.write(f'{title} - {link} - {company} - {salary}\n')
 
 
-@CustomActionRegistry.register(description='Read jobs from file you saved before')
+@Action.register(description='Save people who starred the repo to file')
+def save_starred_people(usernames: list[str]) -> None:
+	with open('starred_people.txt', 'a') as f:
+		for username in usernames:
+			f.write(f'{username}\n')
+
+
+@Action.register(description='Read jobs from file you saved before')
 def read_jobs_from_file() -> str:
 	with open('jobs.txt', 'r') as f:
 		return f.read()
 
 
+@Action.register(
+	description='Call this action if you need more information from the user e.g. login credentials'
+)
+def ask_human_for_more_information(question: str) -> str:
+	answer = input('\n' + question + '\nInput: \n')
+	return answer
+
+
+@Action.register(description='Save socks to file')
+def save_socks_to_file(socks: list[str]) -> None:
+	with open('socks.txt', 'a') as f:
+		for sock in socks:
+			f.write(f'{sock}\n')
+
+
 async def main():
 	task = 'Find 10 software developer jobs in San Francisco at YC startups in google and save them to the file.'
+	# task = 'Find 10 flights from San Francisco to New York in one way in skyscanner and save them to the file.'
+	# task = 'Go to github to https://github.com/gregpr07/browser-use repo and get all people who starred the repo, save them to the file and click to the next page until you get all pages.'
+	# task = 'Read jobs from file and start applying for them one by one - if you need more information from the user call ask_human_for_more_information action.'
+	task = 'I want socks with a theme of friends tv show and find the cheapest ones on amazon.'
 	model = ChatOpenAI(model='gpt-4o')
 	agent = AgentService(task, model)
 

@@ -11,13 +11,13 @@ from pydantic import BaseModel, create_model
 
 from browser_use.agent.prompts import AgentMessagePrompt, AgentSystemPrompt
 from browser_use.agent.views import (
+	Action,
 	ActionResult,
 	AgentAction,
 	AgentHistory,
 	AgentState,
 	ClickElementControllerHistoryItem,
 	CustomAction,
-	CustomActionRegistry,
 	DynamicActions,
 	DynamicOutput,
 	InputTextControllerHistoryItem,
@@ -56,7 +56,7 @@ class AgentService:
 		self.use_vision = use_vision
 
 		# Get registered custom actions
-		custom_actions = CustomActionRegistry.get_registered_actions()
+		custom_actions = Action.get_registered_actions()
 
 		# Get dynamic action model with registered actions
 		self.DynamicActions = DynamicActions.get_or_create_model(custom_actions)
@@ -93,7 +93,7 @@ class AgentService:
 
 		# Get descriptions from registry
 		custom_descriptions = '\n'.join(
-			action.prompt_description for action in CustomActionRegistry.get_registered_actions()
+			action.prompt_description for action in Action.get_registered_actions()
 		)
 
 		return base_description + custom_descriptions if custom_descriptions else base_description
