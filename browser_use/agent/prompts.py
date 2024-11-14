@@ -4,9 +4,9 @@ from browser_use.browser.views import BrowserState
 
 
 class AgentSystemPrompt:
-	def __init__(self, task: str, default_action_description: str):
+	def __init__(self, task: str, action_description: str):
 		self.task = task
-		self.default_action_description = default_action_description
+		self.default_action_description = action_description
 
 	def response_format(self) -> str:
 		"""
@@ -15,16 +15,17 @@ class AgentSystemPrompt:
 		Returns:
 		    str: Response format
 		"""
-		return """{{
-			"current_state": {{
-				"valuation_previous_goal": "String starting with "Success" or "Failed:" evaluate if the previous goal was successful and if failed describe why. If unknown, write 'Unknown'",
-				"memory": "String to store progress information for the overall task to rememeber until the end of the task",
-				"next_goal": "String describing the next immediate goal which can be achieved with one action"
-			}},
-			"action": {{
-				// EXACTLY ONE of the following available actions must be specified
-			}}
-		}}"""
+		return """
+{{
+	"current_state": {{
+		"valuation_previous_goal": "String starting with "Success" or "Failed:" evaluate if the previous goal was successful and if failed describe why. If unknown, write 'Unknown'",
+		"memory": "String to store progress information for the overall task to rememeber until the end of the task",
+		"next_goal": "String describing the next immediate goal which can be achieved with one action"
+	}},
+	"action": {{
+		// EXACTLY ONE of the following available actions must be specified
+	}}
+}}"""
 
 	def example_response(self) -> str:
 		"""
@@ -33,7 +34,8 @@ class AgentSystemPrompt:
 		Returns:
 		    str: Example response
 		"""
-		return """{"current_state": {"valuation_previous_goal": "Success", "memory": "We applied already for 3/7 jobs, 1. ..., 2. ..., 3. ...", "next_goal": "Click on the button x to apply for the next job"}, "action": {"click_element": {"index": 44,"num_clicks": 2}}}"""
+		return """
+{"current_state": {"valuation_previous_goal": "Success", "memory": "We applied already for 3/7 jobs, 1. ..., 2. ..., 3. ...", "next_goal": "Click on the button x to apply for the next job"}, "action": {"click_element": {"index": 44,"num_clicks": 2}}}"""
 
 	def important_rules(self) -> str:
 		"""
@@ -43,22 +45,23 @@ class AgentSystemPrompt:
 		    str: Important rules
 		"""
 		return """
-	1. Only use indexes that exist in the input list for click or input text actions
-	2. Use extract_page_content to get more page information
-	3. If stuck, try alternative approaches, go back, search google
-	4. Use extract_page_content followed by done action to complete task
-	5. If an image is provided, use it to understand the context
-	6. ALWAYS respond in the RESPONSE FORMAT with valid JSON:
-	7. If the page is empty use actions like "go_to_url", "search_google" or "open_tab"
-	8. Remember: Choose EXACTLY ONE action per response. Invalid combinations or multiple actions will be rejected.
+1. Only use indexes that exist in the input list for click or input text actions
+2. Use extract_page_content to get more page information
+3. If stuck, try alternative approaches, go back, search google
+4. Use extract_page_content followed by done action to complete task
+5. If an image is provided, use it to understand the context
+6. ALWAYS respond in the RESPONSE FORMAT with valid JSON:
+7. If the page is empty use actions like "go_to_url", "search_google" or "open_tab"
+8. Remember: Choose EXACTLY ONE action per response. Invalid combinations or multiple actions will be rejected.
+9. If popups like cookies appear, accept or close them
 	"""
 
 	def input_format(self) -> str:
 		return """
-		33:\t<button>Interactive element</button> (33 is the index to interact with)
-		_: Not clickable, only for your context
-		\t: Tab indent (1 tab for depth 1 etc.). This is to help you understand which elements belong to each other.
-		"""
+33:\t<button>Interactive element</button> (33 is the index to interact with)
+_: Not clickable, only for your context
+\t: Tab indent (1 tab for depth 1 etc.). This is to help you understand which elements belong to each other.
+"""
 
 	def get_system_message(self) -> SystemMessage:
 		"""
@@ -70,24 +73,19 @@ class AgentSystemPrompt:
 
 		AGENT_PROMPT = f"""
     
-	You are an AI agent that helps users interact with websites. You receive a list of interactive elements from the current webpage and must respond with specific actions.
-    
-	INPUT FORMAT:
-	{self.input_format()}
+You are an AI agent that helps users interact with websites. You receive a list of interactive elements from the current webpage and must respond with specific actions.
 
-	You have to respond in the following RESPONSE FORMAT: 
-	{self.response_format()}
-
-	Your AVAILABLE ACTIONS:
-    {self.default_action_description}
-
-	Example:
-	{self.example_response()}
-	
-	IMPORTANT RULES:
-	{self.important_rules()}
-	
-    """
+INPUT FORMAT:
+{self.input_format()}
+You have to respond in the following RESPONSE FORMAT: 
+{self.response_format()}
+Your AVAILABLE ACTIONS:
+{self.default_action_description}
+Example:
+{self.example_response()}
+IMPORTANT RULES:
+{self.important_rules()}
+"""
 		return SystemMessage(content=AGENT_PROMPT)
 
 
