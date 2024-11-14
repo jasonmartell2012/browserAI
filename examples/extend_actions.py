@@ -13,29 +13,29 @@ import asyncio
 from langchain_openai import ChatOpenAI
 
 from browser_use.agent.service import Agent
-from browser_use.agent.views import Action
+from browser_use.agent.views import ActionRegistry
 
 
-@Action.register(description='Save job details to file')
+@ActionRegistry.register(description='Save job details to file')
 def save_job_to_file(title: str, link: str, company: str, salary: str) -> None:
 	with open('jobs.txt', 'a') as f:
 		f.write(f'{title} - {link} - {company} - {salary}\n')
 
 
-@Action.register(description='Save people who starred the repo to file')
+@ActionRegistry.register(description='Save people who starred the repo to file')
 def save_starred_people(usernames: list[str]) -> None:
 	with open('starred_people.txt', 'a') as f:
 		for username in usernames:
 			f.write(f'{username}\n')
 
 
-@Action.register(description='Read jobs from file you saved before')
+@ActionRegistry.register(description='Read jobs from file you saved before')
 def read_jobs_from_file() -> str:
 	with open('jobs.txt', 'r') as f:
 		return f.read()
 
 
-@Action.register(
+@ActionRegistry.register(
 	description='Call this action if you need more information from the user e.g. login credentials'
 )
 def ask_human_for_more_information(question: str) -> str:
@@ -43,7 +43,7 @@ def ask_human_for_more_information(question: str) -> str:
 	return answer
 
 
-@Action.register(description='Save socks to file')
+@ActionRegistry.register(description='Save socks to file')
 def save_socks_to_file(socks: list[str]) -> None:
 	with open('socks.txt', 'a') as f:
 		for sock in socks:

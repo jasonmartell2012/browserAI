@@ -5,11 +5,6 @@ from pydantic import BaseModel
 from browser_use.dom.views import ProcessedDomContent
 
 
-# Exceptions
-class BrowserException(Exception):
-	pass
-
-
 # Pydantic
 class TabInfo(BaseModel):
 	"""Represents information about a browser tab"""

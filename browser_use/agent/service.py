@@ -13,12 +13,12 @@ from pydantic import BaseModel, ValidationError
 
 from browser_use.agent.prompts import AgentMessagePrompt, AgentSystemPrompt
 from browser_use.agent.views import (
-	Action,
+	ActionRegistry,
 	ActionResult,
+	AgentAction,
 	AgentError,
 	AgentHistory,
-	DynamicActions,
-	DynamicOutput,
+	AgentOutput,
 )
 from browser_use.browser.views import BrowserState
 from browser_use.controller.service import Controller
@@ -69,11 +69,9 @@ class Agent:
 
 	def _setup_action_models(self) -> None:
 		"""Setup dynamic action and output models"""
-		custom_actions = Action.get_registered_actions()
-		self.DynamicActions = DynamicActions.combine_actions(custom_actions)
-		self.OutputModel = DynamicOutput.type_with_custom_actions(
-			custom_actions=self.DynamicActions
-		)
+		custom_actions = ActionRegistry.get_registered_actions()
+		self.DynamicActions = AgentAction.combine_actions(custom_actions)
+		self.OutputModel = AgentOutput.type_with_custom_actions(custom_actions=self.DynamicActions)
 
 	def _initialize_messages(self) -> list[BaseMessage]:
 		"""Initialize message history with system and first message"""
@@ -87,7 +85,7 @@ class Agent:
 		"""Get combined description of all available actions"""
 		base_description = ControllerActions.description()
 		custom_descriptions = '\n'.join(
-			action.prompt_description for action in Action.get_registered_actions()
+			action.prompt_description for action in ActionRegistry.get_registered_actions()
 		)
 		return base_description + custom_descriptions if custom_descriptions else base_description
 
@@ -162,7 +160,7 @@ class Agent:
 
 	def _make_history_item(
 		self,
-		model_output: DynamicOutput | None,
+		model_output: AgentOutput | None,
 		state: BrowserState,
 		result: ActionResult,
 	) -> None:
@@ -171,13 +169,13 @@ class Agent:
 		self.history.append(history_item)
 
 	@time_execution_async('--get_next_action')
-	async def get_next_action(self, state: BrowserState) -> DynamicOutput:
+	async def get_next_action(self, state: BrowserState) -> AgentOutput:
 		"""Get next action from LLM based on current state"""
 		new_message = AgentMessagePrompt(state).get_user_message()
 		input_messages = self.messages + [new_message]
 
 		structured_llm = self.llm.with_structured_output(self.OutputModel)
-		response: DynamicOutput = await structured_llm.ainvoke(input_messages)  # type: ignore
+		response: AgentOutput = await structured_llm.ainvoke(input_messages)  # type: ignore
 
 		self._update_message_history(state, response)
 		self._log_response(response)

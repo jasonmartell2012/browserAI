@@ -8,13 +8,11 @@ from pydantic import BaseModel, ConfigDict, Field, ValidationError, create_model
 
 from browser_use.browser.views import BrowserState
 from browser_use.controller.views import (
-	ClickElementControllerAction,
 	ControllerActions,
-	InputTextControllerAction,
 )
 
 
-class Action:
+class ActionRegistry:
 	"""Registry for custom actions that can be used by the agent"""
 
 	_actions: Dict[str, tuple[str, Callable]] = {}
@@ -30,15 +28,15 @@ class Action:
 		return decorator
 
 	@classmethod
-	def get_registered_actions(cls) -> list[CustomAction]:
-		"""Get all registered actions as CustomAction instances"""
+	def get_registered_actions(cls) -> list[RegisteredAction]:
+		"""Get all registered actions as RegisteredAction instances"""
 		return [
-			CustomAction(description=desc, function=func)
+			RegisteredAction(description=desc, function=func)
 			for func_name, (desc, func) in cls._actions.items()
 		]
 
 
-class CustomAction(BaseModel):
+class RegisteredAction(BaseModel):
 	"""Model for custom actions with their metadata"""
 
 	name: str
@@ -80,7 +78,7 @@ class ActionResult(BaseModel):
 	error: Optional[str] = None
 
 
-class AgentState(BaseModel):
+class AgentBrain(BaseModel):
 	"""Current state of the agent"""
 
 	valuation_previous_goal: str
@@ -88,20 +86,20 @@ class AgentState(BaseModel):
 	next_goal: str
 
 
-class DynamicActions(ControllerActions):
+class AgentAction(ControllerActions):
 	"""Base class combining controller and custom actions"""
 
-	_cached_model: ClassVar[Optional[Type[DynamicActions]]] = None
-	_custom_actions: ClassVar[Dict[str, CustomAction]] = {}
+	_cached_model: ClassVar[Optional[Type[AgentAction]]] = None
+	_registered_actions: ClassVar[Dict[str, RegisteredAction]] = {}
 
 	@classmethod
 	def combine_actions(
-		cls, custom_actions: Optional[list[CustomAction]] = None
-	) -> Type[DynamicActions]:
+		cls, custom_actions: Optional[list[RegisteredAction]] = None
+	) -> Type[AgentAction]:
 		"""Create or return cached model with combined actions"""
 		if cls._cached_model is None:
-			custom_actions = custom_actions or Action.get_registered_actions()
-			cls._custom_actions = {action.name: action for action in custom_actions}
+			custom_actions = custom_actions or ActionRegistry.get_registered_actions()
+			cls._registered_actions = {action.name: action for action in custom_actions}
 
 			controller_fields = {
 				name: (field.annotation, field.default)
@@ -113,7 +111,7 @@ class DynamicActions(ControllerActions):
 			}
 
 			cls._cached_model = create_model(
-				'DynamicActions', __base__=cls, **{**controller_fields, **custom_fields}
+				'AgentAction', __base__=cls, **{**controller_fields, **custom_fields}
 			)
 
 		return cls._cached_model
@@ -124,32 +122,19 @@ class DynamicActions(ControllerActions):
 		)
 
 	def is_custom_action(self) -> bool:
-		return any(getattr(self, action_name) is not None for action_name in self._custom_actions)
+		return any(
+			getattr(self, action_name) is not None for action_name in self._registered_actions
+		)
 
-	def get_custom_action_and_params(self) -> tuple[CustomAction, dict]:
-		for action_name, action in self._custom_actions.items():
+	def get_custom_action_and_params(self) -> tuple[RegisteredAction, dict]:
+		for action_name, action in self._registered_actions.items():
 			params = getattr(self, action_name)
 			if params is not None:
 				return action, params
 		raise ValueError('No custom action found')
 
 
-class AgentAction(DynamicActions, ControllerActions):
-	"""Concrete implementation of combined actions"""
-
-	pass
-
-
-# History models
-class ClickElementControllerHistoryItem(ClickElementControllerAction):
-	xpath: str | None
-
-
-class InputTextControllerHistoryItem(InputTextControllerAction):
-	xpath: str | None
-
-
-class DynamicOutput(BaseModel):
+class AgentOutput(BaseModel):
 	"""Output model for agent
 
 	@dev note: this model is extended with custom actions in AgentService. You can also use some fields that are not in this model as provided by the linter, as long as they are registered in the DynamicActions model.
@@ -157,25 +142,24 @@ class DynamicOutput(BaseModel):
 
 	model_config = ConfigDict(arbitrary_types_allowed=True)
 
-	current_state: AgentState
-	action: DynamicActions
+	current_state: AgentBrain
+	action: AgentAction
 
 	@staticmethod
-	def type_with_custom_actions(custom_actions: Type[DynamicActions]) -> Type['DynamicOutput']:
+	def type_with_custom_actions(custom_actions: Type[AgentAction]) -> Type['AgentOutput']:
 		"""Extend actions with custom actions"""
-		# Create a new model with proper type annotations
 		return create_model(
-			'DynamicOutput',
-			__base__=DynamicOutput,
+			'AgentOutput',
+			__base__=AgentOutput,
 			action=(custom_actions, Field(...)),  # Properly annotated field with no default
-			__module__=DynamicOutput.__module__,
+			__module__=AgentOutput.__module__,
 		)
 
 
 class AgentHistory(BaseModel):
 	"""History item for agent actions"""
 
-	model_output: DynamicOutput | None
+	model_output: AgentOutput | None
 	result: ActionResult
 	state: BrowserState
 
