@@ -18,17 +18,15 @@ def test_process_html_file():
 	browser.go_to_url('https://www.kayak.ch')
 	# browser.go_to_url('https://google.com/flights')
 
-	time.sleep(1)
+	time.sleep(2)
 	# browser._click_element_by_xpath(
 	# 	'/html/body/div[5]/div/div[2]/div/div/div[3]/div/div[1]/button[1]'
 	# )
-	browser._click_element_by_xpath("//button[div/div[text()='Alle akzeptieren']]")
+	# browser._click_element_by_xpath("//button[div/div[text()='Alle akzeptieren']]")
 
-	elements = time_execution_sync('get_clickable_elements')(
-		dom_service.get_clickable_elements().dom_items_to_string
-	)()
+	elements = time_execution_sync('get_clickable_elements')(dom_service.get_clickable_elements)()
 
-	print(elements)
-	print('Tokens:', count_string_tokens(elements, model='gpt-4o'))
+	print(elements.dom_items_to_string(use_tabs=False))
+	print('Tokens:', count_string_tokens(elements.dom_items_to_string(), model='gpt-4o'))
 
 	input('Press Enter to continue...')

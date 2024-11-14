@@ -38,21 +38,31 @@ class DomService:
 		soup = BeautifulSoup(html_content, 'html.parser')
 
 		candidate_elements: list[Tag | NavigableString] = []
+		dom_queue = [element for element in soup.body.children] if soup.body else []
+		# xpath_cache = {}
 
-		def _process_element(element: PageElement):
+		# Find candidate elements
+		while dom_queue:
+			element = dom_queue.pop()
 			should_add_element = False
 
+			# Add quick filter before expensive checks
 			# if not self._quick_element_filter(element):
 			# 	if isinstance(element, Tag):
 			# 		element.decompose()
-			# 	return
+			# 	continue
 
+			# Handle both Tag elements and text nodes
 			if isinstance(element, Tag):
-				# Don't add any children of non-interactive elements
 				if not self._is_element_accepted(element):
-					element.decompose()
-					return
+					# Skip element if it's not accepted
+					element.decompose()  # get rid of some memory leaks potentially
+					continue
 
+				for child in element.children:
+					dom_queue.append(child)
+
+				# Check if element is interactive or leaf element
 				if self._is_interactive_element(element) or self._is_leaf_element(element):
 					if (
 						self._is_active(element)
@@ -61,20 +71,14 @@ class DomService:
 					):
 						should_add_element = True
 
-				elif isinstance(element, NavigableString) and element.strip():
-					if self._is_visible(element):
-						should_add_element = True
+			elif isinstance(element, NavigableString) and element.strip():
+				if self._is_visible(element):
+					should_add_element = True
 
 			if should_add_element:
-				if isinstance(element, (Tag, NavigableString)):
-					candidate_elements.append(element)
-
-			if isinstance(element, Tag):
-				for child in element.children:
-					_process_element(child)
-
-		for element in soup.body.children if soup.body else []:
-			_process_element(element)
+				if not isinstance(element, (Tag, NavigableString)):
+					continue
+				candidate_elements.append(element)
 
 		# Process candidates
 		selector_map: dict[int, str] = {}
