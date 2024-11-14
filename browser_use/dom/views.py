@@ -15,11 +15,11 @@ class ProcessedDomContent(BaseModel):
 	items: list[DomContentItem]
 	selector_map: SelectorMap
 
-	def dom_items_to_string(self) -> str:
+	def dom_items_to_string(self, use_tabs: bool = True) -> str:
 		"""Convert the processed DOM content to HTML."""
 		formatted_text = ''
 		for item in self.items:
-			item_depth = '\t' * item.depth * 1
+			item_depth = '\t' * item.depth * 1 if use_tabs else ''
 			if item.clickable:
 				formatted_text += f'{item.index}:{item_depth}{item.text}\n'
 			else:
