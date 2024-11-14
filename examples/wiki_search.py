@@ -19,19 +19,7 @@ agent = AgentService(task, model, controller, use_vision=True)
 
 
 async def main():
-	max_steps = 50
-	# Run the agent step by step
-	for i in range(max_steps):
-		print(f'\n📍 Step {i+1}')
-		action, result = await agent.step()
-
-		print('Action:', action)
-		print('Result:', result)
-
-		if result.done:
-			print('\n✅ Task completed successfully!')
-			print('Extracted content:', result.extracted_content)
-			break
+	await agent.run()
 
 
 asyncio.run(main())
