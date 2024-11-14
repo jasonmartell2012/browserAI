@@ -3,7 +3,8 @@ from __future__ import annotations
 from inspect import signature
 from typing import Any, Callable, ClassVar, Dict, Optional, Type, TypeVar
 
-from pydantic import BaseModel, ConfigDict, create_model
+from openai import RateLimitError
+from pydantic import BaseModel, ConfigDict, ValidationError, create_model
 
 from browser_use.controller.views import (
 	ClickElementControllerAction,
@@ -186,3 +187,20 @@ class AgentHistory(BaseModel):
 	state: ControllerPageState
 
 	model_config = ConfigDict(arbitrary_types_allowed=True, protected_namespaces=())
+
+
+class AgentError:
+	"""Container for agent error handling"""
+
+	VALIDATION_ERROR = 'Invalid model output format. Please follow the correct schema.'
+	RATE_LIMIT_ERROR = 'Rate limit reached. Waiting before retry.'
+	NO_VALID_ACTION = 'No valid action found'
+
+	@staticmethod
+	def format_error(error: Exception) -> str:
+		"""Format error message based on error type"""
+		if isinstance(error, ValidationError):
+			return f'{AgentError.VALIDATION_ERROR}\nDetails: {str(error)}'
+		if isinstance(error, RateLimitError):
+			return AgentError.RATE_LIMIT_ERROR
+		return f'Unexpected error: {str(error)}'

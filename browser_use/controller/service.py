@@ -71,8 +71,6 @@ class ControllerService:
 			elif action.go_to_url:
 				self.browser.go_to_url(action.go_to_url.url)
 			elif action.nothing:
-				# self.browser.nothing()
-				# TODO: implement
 				pass
 			elif action.go_back:
 				self.browser.go_back()
@@ -89,11 +87,11 @@ class ControllerService:
 				)
 			elif action.extract_page_content:
 				content = self.browser.extract_page_content()
-				return ActionResult(is_done=False, extracted_content=content)
+				return ActionResult(extracted_content=content)
 			else:
-				raise ValueError(f'Unknown action: {action}')
+				raise ValueError(f'Unknown default action: {action}')
 
-			return ActionResult(is_done=False)
+			return ActionResult()
 
 		except Exception as e:
-			return ActionResult(is_done=False, error=f'Error executing action: {str(e)}')
+			return ActionResult(error=f'Error executing action: {str(e)}')

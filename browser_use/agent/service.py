@@ -3,22 +3,20 @@ from __future__ import annotations
 import json
 import logging
 import time
-from typing import Any, Callable, Optional, Type, TypeVar, Union, cast
+from typing import Any, Optional, Type, TypeVar, cast
 
 from dotenv import load_dotenv
 from langchain_core.language_models.chat_models import BaseChatModel
 from langchain_core.messages import AIMessage, BaseMessage, HumanMessage
 from openai import RateLimitError
-from pydantic import BaseModel, ValidationError, create_model
+from pydantic import BaseModel, ValidationError
 
 from browser_use.agent.prompts import AgentMessagePrompt, AgentSystemPrompt
 from browser_use.agent.views import (
 	Action,
 	ActionResult,
-	AgentAction,
+	AgentError,
 	AgentHistory,
-	AgentState,
-	CustomAction,
 	DynamicActions,
 	DynamicOutput,
 )
@@ -30,7 +28,6 @@ load_dotenv()
 logger = logging.getLogger(__name__)
 
 T = TypeVar('T', bound=BaseModel)
-OutputT = TypeVar('OutputT', bound=BaseModel)
 
 
 class AgentService:
@@ -44,136 +41,122 @@ class AgentService:
 		max_failures: int = 5,
 		retry_delay: int = 10,
 	):
-		"""
-		Agent service that handles task execution using LLM and custom actions.
-
-		Args:
-			task: Task to be performed
-			llm: Language model to use
-			controller: Optional existing controller service
-			use_vision: Whether to use vision capabilities
-			save_conversation_path: Optional path to save conversation history
-		"""
 		self.task = task
 		self.use_vision = use_vision
+		self.llm = llm
+		self.save_conversation_path = save_conversation_path
 
-		# Get registered custom actions
-		custom_actions = Action.get_registered_actions()
-
-		# Get dynamic action model with registered actions
-		self.DynamicActions = DynamicActions.get_or_create_model(custom_actions)
-
-		# Create dynamic output model
-		self.Output = DynamicOutput.get_or_create_model(self.DynamicActions)
-
-		# Type hint the output model
-		self.output_model: Type[OutputT] = cast(Type[OutputT], self.Output)
-
+		# Controller setup
 		self.controller_injected = controller is not None
 		self.controller = controller or ControllerService()
-		self.llm = llm
 
-		# Initialize prompts with action descriptions
-		system_prompt = AgentSystemPrompt(
-			task, default_action_description=self._get_action_description()
-		).get_system_message()
+		# Action and output models setup
+		self._setup_action_models()
 
-		# Initialize message history
-		first_message = HumanMessage(content=f'Your task is: {task}')
-		self.messages: list[BaseMessage] = [system_prompt, first_message]
-		self.n_steps = 0
+		# Message history setup
+		self.messages = self._initialize_messages()
 
-		self.save_conversation_path = save_conversation_path
-		if save_conversation_path is not None:
-			logger.info(f'Saving conversation to {save_conversation_path}')
-
+		# Tracking variables
 		self.action_history: list[AgentHistory] = []
-
+		self.n_steps = 1
 		self.consecutive_failures = 0
 		self.max_failures = max_failures
 		self.retry_delay = retry_delay
 
+		if save_conversation_path:
+			logger.info(f'Saving conversation to {save_conversation_path}')
+
+	def _setup_action_models(self) -> None:
+		"""Setup dynamic action and output models"""
+		custom_actions = Action.get_registered_actions()
+		self.DynamicActions = DynamicActions.get_or_create_model(custom_actions)
+		self.Output = DynamicOutput.get_or_create_model(self.DynamicActions)
+		self.output_model: Type[T] = cast(Type[T], self.Output)
+
+	def _initialize_messages(self) -> list[BaseMessage]:
+		"""Initialize message history with system and first message"""
+		system_prompt = AgentSystemPrompt(
+			self.task, default_action_description=self._get_action_description()
+		).get_system_message()
+		first_message = HumanMessage(content=f'Your task is: {self.task}')
+		return [system_prompt, first_message]
+
 	def _get_action_description(self) -> str:
 		"""Get combined description of all available actions"""
 		base_description = ControllerActions.description()
-
-		# Get descriptions from registry
 		custom_descriptions = '\n'.join(
 			action.prompt_description for action in Action.get_registered_actions()
 		)
-
 		return base_description + custom_descriptions if custom_descriptions else base_description
 
-	async def run(self, max_steps: int = 100) -> list[AgentHistory]:
-		"""Execute the task with maximum number of steps"""
-		try:
-			logger.info(f'🚀 Starting task: {self.task}')
-
-			for i in range(max_steps):
-				if self.consecutive_failures >= self.max_failures:
-					logger.error(f'❌ Stopping due to {self.max_failures} consecutive failures')
-					return self.action_history
-
-				history_item = await self.step()
-
-				if history_item.result.error:
-					logger.warning(f'Step failed: {history_item.result.error}')
-
-				if history_item.result.is_done:
-					logger.info('✅ Task completed successfully')
-					return self.action_history
-
-			logger.info('❌ Failed to complete task in maximum steps')
-			return self.action_history
-		finally:
-			if not self.controller_injected:
-				self.controller.browser.close()
-
 	@time_execution_async('--step')
-	async def step(self) -> AgentHistory:
+	async def step(self) -> None:
 		"""Execute one step of the task"""
 
+		logger.info(f'🔄 Step {self.n_steps}')
 		state = self.controller.get_current_state(screenshot=self.use_vision)
+
 		try:
 			model_output = await self.get_next_action(state)
-		except ValidationError as e:
-			self.consecutive_failures += 1
-			error_msg = 'Invalid model output format. Please follow the correct schema.'
-			logger.error(f'{error_msg}\nDetails: {str(e)}')
-			return self._make_history_item(None, state, ActionResult(error=error_msg))
-		except RateLimitError:
-			logger.warning(f'Rate limit reached. Waiting {self.retry_delay} seconds...')
-			time.sleep(self.retry_delay)
-			return await self.step()  # Retry the step
+			action = model_output.action
+			result = self._execute_action(action)
+
+			# Success
+			self.consecutive_failures = 0
+
 		except Exception as e:
+			result = self._handle_step_error(e, state)
+			model_output = None
+
+		self._update_messages_with_result(result)
+		self._make_history_item(model_output, state, result)
+
+	def _handle_step_error(self, error: Exception, state: ControllerPageState) -> ActionResult:
+		"""Handle all types of errors that can occur during a step"""
+		error_msg = str(error)
+		prefix = f'Failed {self.consecutive_failures + 1}/{self.max_failures} times:\n '
+
+		if isinstance(error, ValidationError):
+			error_msg = f'{AgentError.VALIDATION_ERROR}\nDetails: {str(error)}'
+			logger.error(f'{prefix}{error_msg}')
 			self.consecutive_failures += 1
-			error_msg = f'Unexpected error during model inference: {str(e)}'
-			logger.error(error_msg)
-			return self._make_history_item(None, state, ActionResult(error=error_msg))
 
-		# Reset consecutive failures on successful model output
-		self.consecutive_failures = 0
+		elif isinstance(error, RateLimitError):
+			error_msg = f'{AgentError.RATE_LIMIT_ERROR}\nWaiting {self.retry_delay} seconds...'
+			logger.warning(f'{prefix}{error_msg}')
+			time.sleep(self.retry_delay)
+			self.consecutive_failures += 1
 
-		action = model_output.action
-		# Handle controller actions
+		elif isinstance(error, ValueError):
+			error_msg = f'{AgentError.NO_VALID_ACTION}\n{error}'
+			logger.error(f'{prefix}{error_msg}')
+			self.consecutive_failures += 1
+
+		else:
+			error_msg = f'Unexpected error: {str(error)}'
+			logger.error(f'{prefix}{error_msg}')
+			raise Exception(error_msg)
+
+		return ActionResult(error=error_msg)
+
+	def _execute_action(self, action: Any) -> ActionResult:
+		"""Execute the appropriate action type"""
 		if action.is_controller_action():
-			result = self.controller.act(action)
+			return self.controller.act(action)
 
-		# Handle custom actions
 		elif action.is_custom_action():
 			custom_action, params = action.get_custom_action_and_params()
-			result = custom_action.execute(params)
+			return custom_action.execute(params)
+
 		else:
-			result = ActionResult(is_done=False, error=f'No valid action found: {action}')
-			logger.error(f'No valid action found: {action}')
+			raise ValueError(f'Unknown action: {action}')
 
-		# include result in model
-		if result.extracted_content is not None:
+	def _update_messages_with_result(self, result: ActionResult) -> None:
+		"""Update message history with action results"""
+		if result.extracted_content:
 			self.messages.append(HumanMessage(content=result.extracted_content))
-		if result.error is not None:
+		if result.error:
 			self.messages.append(HumanMessage(content=result.error))
-
-		return self._make_history_item(model_output, state, result)
 
 	def _make_history_item(
 		self,
@@ -181,7 +164,7 @@ class AgentService:
 		state: ControllerPageState,
 		result: ActionResult,
 	) -> AgentHistory:
-		"""Create history item from action and state"""
+		"""Create and store history item"""
 		history_item = AgentHistory(model_output=model_output, result=result, state=state)
 		self.action_history.append(history_item)
 		return history_item
@@ -190,50 +173,93 @@ class AgentService:
 	async def get_next_action(self, state: ControllerPageState) -> Any:
 		"""Get next action from LLM based on current state"""
 		new_message = AgentMessagePrompt(state).get_user_message()
-		logger.debug(f'current tabs: {state.tabs}')
 		input_messages = self.messages + [new_message]
 
-		# Use dynamic output model with proper typing
 		structured_llm = self.llm.with_structured_output(self.output_model)
 		response = await structured_llm.ainvoke(input_messages)
 
-		# Update message history
-		history_new_message = AgentMessagePrompt(state).get_message_for_history()
-		self.messages.append(history_new_message)
-		self.messages.append(AIMessage(content=response.model_dump_json(exclude_unset=True)))
-
-		logger.info(
-			f'💭 Thought: {response.current_state.model_dump_json(exclude_unset=True, indent=4)}'
-		)
-		logger.info(f'➡️  Action: {response.action.model_dump_json(exclude_unset=True)}')
-		self.n_steps += 1
-
+		self._update_message_history(state, response)
+		self._log_response(response)
 		self._save_conversation(input_messages, response)
 
 		return response
 
+	def _update_message_history(self, state: ControllerPageState, response: Any) -> None:
+		"""Update message history with new interactions"""
+		history_message = AgentMessagePrompt(state).get_message_for_history()
+		self.messages.append(history_message)
+		self.messages.append(AIMessage(content=response.model_dump_json(exclude_unset=True)))
+		self.n_steps += 1
+
+	def _log_response(self, response: Any) -> None:
+		"""Log the model's response"""
+		logger.info(
+			f'💭 Thought: {response.current_state.model_dump_json(exclude_unset=True, indent=4)}'
+		)
+		logger.info(f'➡️  Action: {response.action.model_dump_json(exclude_unset=True)}')
+
 	def _save_conversation(self, input_messages: list[BaseMessage], response: Any) -> None:
 		"""Save conversation history to file if path is specified"""
-		if self.save_conversation_path is not None:
-			with open(self.save_conversation_path + f'_{self.n_steps}.txt', 'w') as f:
-				# Write messages with proper formatting
-				for message in input_messages:
-					f.write('=' * 33 + f' {message.__class__.__name__} ' + '=' * 33 + '\n\n')
+		if not self.save_conversation_path:
+			return
 
-					if isinstance(message.content, list):
-						# Handle vision model messages
-						for item in message.content:
-							if isinstance(item, dict) and item.get('type') == 'text':
-								f.write(item['text'].strip() + '\n')
-					elif isinstance(message.content, str):
-						try:
-							content = json.loads(message.content)
-							f.write(json.dumps(content, indent=2) + '\n')
-						except json.JSONDecodeError:
-							f.write(message.content.strip() + '\n')
+		with open(self.save_conversation_path + f'_{self.n_steps}.txt', 'w') as f:
+			self._write_messages_to_file(f, input_messages)
+			self._write_response_to_file(f, response)
 
-					f.write('\n')
+	def _write_messages_to_file(self, f: Any, messages: list[BaseMessage]) -> None:
+		"""Write messages to conversation file"""
+		for message in messages:
+			f.write('=' * 33 + f' {message.__class__.__name__} ' + '=' * 33 + '\n\n')
 
-				# Write final response
-				f.write('=' * 33 + ' Response ' + '=' * 33 + '\n\n')
-				f.write(json.dumps(json.loads(response.model_dump_json()), indent=2))
+			if isinstance(message.content, list):
+				for item in message.content:
+					if isinstance(item, dict) and item.get('type') == 'text':
+						f.write(item['text'].strip() + '\n')
+			elif isinstance(message.content, str):
+				try:
+					content = json.loads(message.content)
+					f.write(json.dumps(content, indent=2) + '\n')
+				except json.JSONDecodeError:
+					f.write(message.content.strip() + '\n')
+
+			f.write('\n')
+
+	def _write_response_to_file(self, f: Any, response: Any) -> None:
+		"""Write model response to conversation file"""
+		f.write('=' * 33 + ' Response ' + '=' * 33 + '\n\n')
+		f.write(json.dumps(json.loads(response.model_dump_json()), indent=2))
+
+	async def run(self, max_steps: int = 100) -> list[AgentHistory]:
+		"""Execute the task with maximum number of steps"""
+		try:
+			logger.info(f'🚀 Starting task: {self.task}')
+
+			for step in range(max_steps):
+				if self._too_many_failures():
+					break
+
+				await self.step()
+
+				if self._is_task_complete():
+					logger.info('✅ Task completed successfully')
+					break
+			else:
+				logger.info('❌ Failed to complete task in maximum steps')
+
+			return self.action_history
+
+		finally:
+			if not self.controller_injected:
+				self.controller.browser.close()
+
+	def _too_many_failures(self) -> bool:
+		"""Check if we should stop due to too many failures"""
+		if self.consecutive_failures >= self.max_failures:
+			logger.error(f'❌ Stopping due to {self.max_failures} consecutive failures')
+			return True
+		return False
+
+	def _is_task_complete(self) -> bool:
+		"""Check if the task has been completed successfully"""
+		return bool(self.action_history and self.action_history[-1].result.is_done)
