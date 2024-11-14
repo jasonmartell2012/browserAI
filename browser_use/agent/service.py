@@ -57,7 +57,7 @@ class AgentService:
 		self.messages = self._initialize_messages()
 
 		# Tracking variables
-		self.action_history: list[AgentHistory] = []
+		self.history: list[AgentHistory] = []
 		self.n_steps = 1
 		self.consecutive_failures = 0
 		self.max_failures = max_failures
@@ -70,8 +70,6 @@ class AgentService:
 		"""Setup dynamic action and output models"""
 		custom_actions = Action.get_registered_actions()
 		self.DynamicActions = DynamicActions.combine_actions(custom_actions)
-		# self.Output = DynamicOutput(current_state=AgentState(), action=self.DynamicActions)
-		# self.output_model: Type[DynamicOutput] = cast(Type[DynamicOutput], self.Output)
 		self.OutputModel = DynamicOutput.type_with_custom_actions(
 			custom_actions=self.DynamicActions
 		)
@@ -169,7 +167,7 @@ class AgentService:
 	) -> None:
 		"""Create and store history item"""
 		history_item = AgentHistory(model_output=model_output, result=result, state=state)
-		self.action_history.append(history_item)
+		self.history.append(history_item)
 
 	@time_execution_async('--get_next_action')
 	async def get_next_action(self, state: ControllerPageState) -> DynamicOutput:
@@ -256,7 +254,7 @@ class AgentService:
 			else:
 				logger.info('❌ Failed to complete task in maximum steps')
 
-			return self.action_history
+			return self.history
 
 		finally:
 			if not self.controller_injected:
@@ -271,4 +269,4 @@ class AgentService:
 
 	def _is_task_complete(self) -> bool:
 		"""Check if the task has been completed successfully"""
-		return bool(self.action_history and self.action_history[-1].result.is_done)
+		return bool(self.history and self.history[-1].result.is_done)
