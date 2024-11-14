@@ -14,12 +14,12 @@ class GoToUrlControllerAction(BaseModel):
 
 
 class ClickElementControllerAction(BaseModel):
-	id: int
+	index: int
 	num_clicks: int = 1
 
 
 class InputTextControllerAction(BaseModel):
-	id: int
+	index: int
 	text: str
 
 

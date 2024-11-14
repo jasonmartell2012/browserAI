@@ -79,11 +79,11 @@ class ControllerService:
 				return ActionResult(is_done=True, extracted_content=action.done.text)
 			elif action.click_element:
 				self.browser.click_element_by_index(
-					action.click_element.id, current_state, action.click_element.num_clicks
+					action.click_element.index, current_state, action.click_element.num_clicks
 				)
 			elif action.input_text:
 				self.browser.input_text_by_index(
-					action.input_text.id, action.input_text.text, current_state
+					action.input_text.index, action.input_text.text, current_state
 				)
 			elif action.extract_page_content:
 				content = self.browser.extract_page_content()
