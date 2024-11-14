@@ -6,6 +6,7 @@ from openai import RateLimitError
 from pydantic import BaseModel, ConfigDict, Field, ValidationError, create_model
 
 from browser_use.browser.views import BrowserState
+from browser_use.controller.registry.views import ActionModel
 
 
 class ActionResult(BaseModel):
@@ -24,10 +25,6 @@ class AgentBrain(BaseModel):
 	next_goal: str
 
 
-class AgentAction(BaseModel):
-	pass
-
-
 class AgentOutput(BaseModel):
 	"""Output model for agent
 
@@ -37,10 +34,10 @@ class AgentOutput(BaseModel):
 	model_config = ConfigDict(arbitrary_types_allowed=True)
 
 	current_state: AgentBrain
-	action: AgentAction
+	action: ActionModel
 
 	@staticmethod
-	def type_with_custom_actions(custom_actions: Type[AgentAction]) -> Type['AgentOutput']:
+	def type_with_custom_actions(custom_actions: Type[ActionModel]) -> Type['AgentOutput']:
 		"""Extend actions with custom actions"""
 		return create_model(
 			'AgentOutput',

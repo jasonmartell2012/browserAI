@@ -1,12 +1,12 @@
 from inspect import signature
-from typing import Any, Callable, Dict, Optional, Type
+from typing import Any, Callable, Optional, Type
 
 from pydantic import BaseModel, create_model
 
 from browser_use.browser.service import Browser
 from browser_use.controller.registry.views import (
+	ActionModel,
 	ActionRegistry,
-	DynamicActionModel,
 	RegisteredAction,
 )
 
@@ -25,7 +25,11 @@ class Registry:
 			for name, param in sig.parameters.items()
 			if name != 'browser'
 		}
-		return create_model(f'{function.__name__}Params', __base__=DynamicActionModel, **params)
+		return create_model(
+			f'{function.__name__}Params',
+			__base__=ActionModel,
+			**params,
+		)
 
 	def action(
 		self,
@@ -86,13 +90,13 @@ class Registry:
 		except Exception as e:
 			raise Exception(f'Error executing action {action_name}: {str(e)}')
 
-	def create_action_model(self) -> Type[BaseModel]:
+	def create_action_model(self) -> Type[ActionModel]:
 		"""Creates a Pydantic model from registered actions"""
 		fields = {
 			name: (Optional[action.param_model], None)
 			for name, action in self.registry.actions.items()
 		}
-		return create_model('DynamicActions', __base__=DynamicActionModel, **fields)
+		return create_model('ActionModel', __base__=ActionModel, **fields)
 
 	def get_prompt_description(self) -> str:
 		"""Get a description of all actions for the prompt"""

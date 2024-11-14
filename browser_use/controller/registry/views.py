@@ -1,4 +1,4 @@
-from typing import Any, Callable, Dict, Optional, Type
+from typing import Callable, Dict, Type
 
 from pydantic import BaseModel, ConfigDict
 
@@ -27,10 +27,10 @@ class RegisteredAction(BaseModel):
 		return s
 
 
-class DynamicActionModel(BaseModel):
+class ActionModel(BaseModel):
 	"""Base model for dynamically created action models"""
 
-	pass
+	model_config = ConfigDict(arbitrary_types_allowed=True)
 
 
 class ActionRegistry(BaseModel):

@@ -1,7 +1,9 @@
 import logging
 
-from browser_use.agent.views import ActionResult, AgentAction
-from browser_use.browser.service import Browser, MainContentExtractor
+from main_content_extractor import MainContentExtractor
+
+from browser_use.agent.views import ActionModel, ActionResult
+from browser_use.browser.service import Browser
 from browser_use.browser.views import TabInfo
 from browser_use.controller.registry.service import Registry
 from browser_use.controller.views import (
@@ -119,7 +121,9 @@ class Controller:
 		)
 		def extract_content(params: ExtractPageContentAction, browser: Browser):
 			driver = browser._get_driver()
-			content = MainContentExtractor.extract(driver.page_source, output_format=params.value)
+			content = MainContentExtractor.extract(
+				html=driver.page_source, output_format=params.value
+			)
 			return ActionResult(extracted_content=content)
 
 		@self.registry.action('Complete task', param_model=DoneAction, requires_browser=True)
@@ -132,7 +136,7 @@ class Controller:
 		return self.registry.action(description, **kwargs)
 
 	@time_execution_sync('--act')
-	def act(self, action: AgentAction) -> ActionResult:
+	def act(self, action: ActionModel) -> ActionResult:
 		"""Execute an action"""
 		try:
 			for action_name, params in action.model_dump(exclude_unset=True).items():

@@ -62,9 +62,9 @@ class Agent:
 	def _setup_action_models(self) -> None:
 		"""Setup dynamic action models from controller's registry"""
 		# Get the dynamic action model from controller's registry
-		self.DynamicActions = self.controller.registry.create_action_model()
+		self.ActionModel = self.controller.registry.create_action_model()
 		# Create output model with the dynamic actions
-		self.OutputModel = AgentOutput.type_with_custom_actions(self.DynamicActions)
+		self.AgentOutput = AgentOutput.type_with_custom_actions(self.ActionModel)
 
 	def _initialize_messages(self) -> list[BaseMessage]:
 		"""Initialize message history with system and first message"""
@@ -138,7 +138,7 @@ class Agent:
 		new_message = AgentMessagePrompt(state).get_user_message()
 		input_messages = self.messages + [new_message]
 
-		structured_llm = self.llm.with_structured_output(self.OutputModel)
+		structured_llm = self.llm.with_structured_output(self.AgentOutput)
 		response: AgentOutput = await structured_llm.ainvoke(input_messages)  # type: ignore
 
 		self._update_message_history(state, response)

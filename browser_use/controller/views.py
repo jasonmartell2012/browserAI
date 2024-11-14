@@ -1,8 +1,6 @@
-from typing import List, Literal, Optional
+from typing import Literal
 
 from pydantic import BaseModel
-
-from browser_use.browser.service import Browser
 
 
 # Action Input Models

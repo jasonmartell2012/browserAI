@@ -9,7 +9,6 @@ import tempfile
 import time
 from typing import Literal
 
-from main_content_extractor import MainContentExtractor
 from Screenshot import Screenshot
 from selenium import webdriver
 from selenium.webdriver.chrome.options import Options
