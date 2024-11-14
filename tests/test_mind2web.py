@@ -10,7 +10,7 @@ from typing import Any, Dict, List
 import pytest
 from langchain_openai import ChatOpenAI
 
-from browser_use.agent.service import AgentService
+from browser_use.agent.service import Agent
 from browser_use.controller.service import ControllerService
 from browser_use.utils import logger
 from browser_use.validator.service import ValidationService
@@ -70,7 +70,7 @@ async def test_random_samples(test_cases: List[Dict[str, Any]], llm, controller,
 		logger.info(f'--- Random Sample {i}/{len(samples)} ---')
 		logger.info(f'Task: {task}\n')
 
-		agent = AgentService(task, llm, controller)
+		agent = Agent(task, llm, controller)
 
 		await agent.run()
 

@@ -2,7 +2,7 @@ import pytest
 from langchain_openai import ChatOpenAI
 from pydantic import BaseModel
 
-from browser_use.agent.service import AgentService
+from browser_use.agent.service import Agent
 from browser_use.agent.views import ActionResult
 from browser_use.controller.service import ControllerService
 
@@ -24,7 +24,7 @@ async def agent_with_controller():
 @pytest.mark.asyncio
 async def test_ecommerce_interaction(llm, agent_with_controller):
 	"""Test complex ecommerce interaction sequence"""
-	agent = AgentService(
+	agent = Agent(
 		task="Go to amazon.com, search for 'laptop', filter by 4+ stars, and find the price of the first result",
 		llm=llm,
 		controller=agent_with_controller,
@@ -66,7 +66,7 @@ async def test_ecommerce_interaction(llm, agent_with_controller):
 @pytest.mark.asyncio
 async def test_error_recovery(llm, agent_with_controller):
 	"""Test agent's ability to recover from errors"""
-	agent = AgentService(
+	agent = Agent(
 		task='Navigate to nonexistent-site.com and then recover by going to google.com',
 		llm=llm,
 		controller=agent_with_controller,
@@ -95,7 +95,7 @@ async def test_error_recovery(llm, agent_with_controller):
 @pytest.mark.asyncio
 async def test_find_contact_email(llm, agent_with_controller):
 	"""Test agent's ability to find contact email on a website"""
-	agent = AgentService(
+	agent = Agent(
 		task='Go to https://browser-use.com/ and find out the contact email',
 		llm=llm,
 		controller=agent_with_controller,
@@ -131,7 +131,7 @@ async def test_find_contact_email(llm, agent_with_controller):
 @pytest.mark.asyncio
 async def test_agent_finds_installation_command(llm, agent_with_controller):
 	"""Test agent's ability to find the pip installation command for browser-use on the web"""
-	agent = AgentService(
+	agent = Agent(
 		task='Find the pip installation command for the browser-use repo',
 		llm=llm,
 		controller=agent_with_controller,
@@ -188,7 +188,7 @@ class CaptchaTest(BaseModel):
 )
 async def test_captcha_solver(llm, agent_with_controller, captcha: CaptchaTest):
 	"""Test agent's ability to solve different types of captchas"""
-	agent = AgentService(
+	agent = Agent(
 		task=f'Go to {captcha.url} and solve the captcha',
 		llm=llm,
 		controller=agent_with_controller,

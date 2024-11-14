@@ -30,7 +30,7 @@ logger = logging.getLogger(__name__)
 T = TypeVar('T', bound=BaseModel)
 
 
-class AgentService:
+class Agent:
 	def __init__(
 		self,
 		task: str,

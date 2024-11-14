@@ -12,7 +12,7 @@ import asyncio
 
 from langchain_openai import ChatOpenAI
 
-from browser_use.agent.service import AgentService
+from browser_use.agent.service import Agent
 from browser_use.agent.views import Action
 
 
@@ -57,7 +57,7 @@ async def main():
 	# task = 'Read jobs from file and start applying for them one by one - if you need more information from the user call ask_human_for_more_information action.'
 	task = 'I want socks with a theme of friends tv show and find the cheapest ones on amazon.'
 	model = ChatOpenAI(model='gpt-4o')
-	agent = AgentService(task, model)
+	agent = Agent(task, model)
 
 	result = await agent.run()
 

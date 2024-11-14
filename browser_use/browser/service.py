@@ -52,16 +52,18 @@ class BrowserService:
 			if self.headless:
 				chrome_options.add_argument('--headless=new')  # Updated headless argument
 
-			# Anti-detection measures
+			# Essential automation and performance settings
 			chrome_options.add_argument('--disable-blink-features=AutomationControlled')
 			chrome_options.add_experimental_option('excludeSwitches', ['enable-automation'])
 			chrome_options.add_experimental_option('useAutomationExtension', False)
-
-			# Additional stealth settings
+			chrome_options.add_argument('--no-sandbox')
 			chrome_options.add_argument('--window-size=1280,1024')
 			chrome_options.add_argument('--disable-extensions')
-			chrome_options.add_argument('--no-sandbox')
-			chrome_options.add_argument('--disable-infobars')
+
+			# Background process optimization
+			chrome_options.add_argument('--disable-background-timer-throttling')
+			chrome_options.add_argument('--disable-backgrounding-occluded-windows')
+			chrome_options.add_argument('--disable-popup-blocking')
 
 			# Initialize the Chrome driver with better error handling
 			service = ChromeService(ChromeDriverManager().install())
