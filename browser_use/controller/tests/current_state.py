@@ -1,10 +1,11 @@
 import pytest
-from browser_use.controller.service import ControllerService
+
+from browser_use.controller.service import Controller
 
 
 def test_get_current_state():
 	# Initialize controller
-	controller = ControllerService()
+	controller = Controller()
 
 	# Go to a test URL
 	controller.browser.go_to_url('https://www.example.com')

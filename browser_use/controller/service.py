@@ -13,7 +13,7 @@ logger = logging.getLogger(__name__)
 logging.basicConfig(level=logging.INFO)
 
 
-class ControllerService:
+class Controller:
 	"""
 	Controller service that interacts with the browser.
 

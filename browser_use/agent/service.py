@@ -20,7 +20,7 @@ from browser_use.agent.views import (
 	DynamicActions,
 	DynamicOutput,
 )
-from browser_use.controller.service import ControllerService
+from browser_use.controller.service import Controller
 from browser_use.controller.views import ControllerActions, ControllerPageState
 from browser_use.utils import time_execution_async
 
@@ -35,7 +35,7 @@ class Agent:
 		self,
 		task: str,
 		llm: BaseChatModel,
-		controller: Optional[ControllerService] = None,
+		controller: Optional[Controller] = None,
 		use_vision: bool = True,
 		save_conversation_path: Optional[str] = None,
 		max_failures: int = 5,
@@ -48,7 +48,7 @@ class Agent:
 
 		# Controller setup
 		self.controller_injected = controller is not None
-		self.controller = controller or ControllerService()
+		self.controller = controller or Controller()
 
 		# Action and output models setup
 		self._setup_action_models()

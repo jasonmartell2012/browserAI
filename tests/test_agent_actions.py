@@ -4,7 +4,7 @@ from pydantic import BaseModel
 
 from browser_use.agent.service import Agent
 from browser_use.agent.views import ActionResult
-from browser_use.controller.service import ControllerService
+from browser_use.controller.service import Controller
 
 
 @pytest.fixture
@@ -16,7 +16,7 @@ def llm():
 @pytest.fixture
 async def agent_with_controller():
 	"""Create agent with controller for testing"""
-	controller = ControllerService(keep_open=False)
+	controller = Controller(keep_open=False)
 	yield controller
 	controller.browser.close()
 

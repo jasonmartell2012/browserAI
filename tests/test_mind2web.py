@@ -11,7 +11,7 @@ import pytest
 from langchain_openai import ChatOpenAI
 
 from browser_use.agent.service import Agent
-from browser_use.controller.service import ControllerService
+from browser_use.controller.service import Controller
 from browser_use.utils import logger
 from browser_use.validator.service import ValidationService
 
@@ -43,7 +43,7 @@ def llm():
 @pytest.fixture(scope='function')
 async def controller():
 	"""Initialize and cleanup the controller for each test"""
-	controller = ControllerService()
+	controller = Controller()
 	yield controller
 	controller.browser.close()
 

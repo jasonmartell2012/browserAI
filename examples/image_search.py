@@ -8,11 +8,11 @@ import asyncio
 from langchain_openai import ChatOpenAI
 
 from browser_use.agent.service import Agent
-from browser_use.controller.service import ControllerService
+from browser_use.controller.service import Controller
 
 people = ['Albert Einstein', 'Oprah Winfrey', 'Steve Jobs']
 task = f'Opening new tabs and searching for images for these people: {", ".join(people)}. Then ask me for further instructions.'
-controller = ControllerService(keep_open=True)
+controller = Controller(keep_open=True)
 model = ChatOpenAI(model='gpt-4o')
 agent = Agent(task, model, controller, use_vision=True)
 

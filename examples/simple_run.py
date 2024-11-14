@@ -8,7 +8,7 @@ import logging
 import os
 import sys
 
-from browser_use.controller.service import ControllerService
+from browser_use.controller.service import Controller
 
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 

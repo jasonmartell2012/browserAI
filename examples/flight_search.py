@@ -13,10 +13,10 @@ from langchain_anthropic import ChatAnthropic
 from langchain_openai import ChatOpenAI
 
 from browser_use.agent.service import Agent
-from browser_use.controller.service import ControllerService
+from browser_use.controller.service import Controller
 
 task = 'Go to kayak.com and find a one-way flight from Bali to Oman on 12 January 2025.'
-controller = ControllerService()
+controller = Controller()
 # model = ChatAnthropic(
 # 	model_name='claude-3-5-sonnet-20240620', timeout=25, stop=None, temperature=0.3
 # )
