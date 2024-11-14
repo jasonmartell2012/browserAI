@@ -30,7 +30,7 @@ class Controller:
 		self.cached_state: BrowserState | None = None
 
 	def get_state(self, use_vision: bool = False) -> ControllerPageState:
-		self.cached_state = self.browser.get_state(screenshot=use_vision)
+		self.cached_state = self.browser.get_state(use_vision=use_vision)
 		return self.cached_state
 
 	@time_execution_sync('--act')
