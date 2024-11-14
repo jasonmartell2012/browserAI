@@ -27,40 +27,16 @@ class Controller:
 
 	def __init__(self, keep_open: bool = False):
 		self.browser = BrowserService(keep_open=keep_open)
-		self.cached_browser_state: BrowserState | None = None
+		self.cached_state: BrowserState | None = None
 
-	@time_execution_sync('--get_cached_browser_state')
-	def get_cached_browser_state(self, force_update: bool = False) -> BrowserState:
-		if self.cached_browser_state is None or force_update:
-			self.cached_browser_state = self.browser.get_updated_state()
-			return self.cached_browser_state
-
-		return self.cached_browser_state
-		# return self.browser.get_updated_state()
-
-	def get_current_state(self, screenshot: bool = False) -> ControllerPageState:
-		browser_state = self.get_cached_browser_state(force_update=True)
-
-		# Get tab information without switching
-		tabs = self.browser.get_tabs_info()
-
-		screenshot_b64 = None
-		if screenshot:
-			screenshot_b64 = self.browser.take_screenshot(selector_map=browser_state.selector_map)
-
-		return ControllerPageState(
-			items=browser_state.items,
-			url=browser_state.url,
-			title=browser_state.title,
-			selector_map=browser_state.selector_map,
-			screenshot=screenshot_b64,
-			tabs=tabs,
-		)
+	def get_state(self, screenshot: bool = False) -> ControllerPageState:
+		self.cached_state = self.browser.get_state(screenshot=screenshot)
+		return self.cached_state
 
 	@time_execution_sync('--act')
 	def act(self, action: ControllerActions) -> ActionResult:
 		try:
-			current_state = self.get_cached_browser_state(force_update=False)
+			current_state = self.cached_state
 
 			if action.search_google:
 				self.browser.search_google(action.search_google.query)

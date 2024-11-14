@@ -11,6 +11,6 @@ def test_get_current_state():
 	controller.browser.go_to_url('https://www.example.com')
 
 	# Get current state without screenshot
-	state = controller.get_current_state(screenshot=True)
+	state = controller.get_state(screenshot=True)
 
 	input('Press Enter to continue...')

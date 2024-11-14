@@ -21,6 +21,7 @@ from selenium.webdriver.support.ui import WebDriverWait
 from webdriver_manager.chrome import ChromeDriverManager
 
 from browser_use.browser.views import BrowserState
+from browser_use.controller.views import ControllerPageState
 from browser_use.dom.service import DomService
 from browser_use.dom.views import SelectorMap
 from browser_use.utils import time_execution_sync
@@ -537,3 +538,26 @@ class BrowserService:
 		driver.execute_script(f'window.open("{url}", "_blank");')
 		self.wait_for_page_load()
 		return self.handle_new_tab()
+
+	@time_execution_sync('--get_state')
+	def get_state(self, screenshot: bool = False) -> ControllerPageState:
+		"""
+		Get the current state of the browser including page content and tab information.
+		"""
+		browser_state = self.get_updated_state()
+
+		# Get tab information without switching
+		tabs = self.get_tabs_info()
+
+		screenshot_b64 = None
+		if screenshot:
+			screenshot_b64 = self.take_screenshot(selector_map=browser_state.selector_map)
+
+		return ControllerPageState(
+			items=browser_state.items,
+			url=browser_state.url,
+			title=browser_state.title,
+			selector_map=browser_state.selector_map,
+			screenshot=screenshot_b64,
+			tabs=tabs,
+		)

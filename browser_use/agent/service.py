@@ -95,7 +95,7 @@ class Agent:
 		"""Execute one step of the task"""
 
 		logger.info(f'\n📍 Step {self.n_steps}')
-		state = self.controller.get_current_state(screenshot=self.use_vision)
+		state = self.controller.get_state(screenshot=self.use_vision)
 
 		try:
 			model_output = await self.get_next_action(state)
