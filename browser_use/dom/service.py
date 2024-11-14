@@ -38,7 +38,8 @@ class DomService:
 		soup = BeautifulSoup(html_content, 'html.parser')
 
 		candidate_elements: list[Tag | NavigableString] = []
-		dom_queue = [element for element in soup.body.children] if soup.body else []
+		dom_queue = [element for element in reversed(list(soup.body.children))] if soup.body else []
+		# dom_queue = [element for element in soup.body.children] if soup.body else []
 		# xpath_cache = {}
 
 		# Find candidate elements
@@ -59,7 +60,8 @@ class DomService:
 					element.decompose()  # get rid of some memory leaks potentially
 					continue
 
-				for child in element.children:
+				for child in reversed(list(element.children)):
+					# for child in element.children:
 					dom_queue.append(child)
 
 				# Check if element is interactive or leaf element

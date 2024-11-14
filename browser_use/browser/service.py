@@ -62,6 +62,10 @@ class BrowserService:
 		chrome_options.add_argument('--disable-extensions')
 		chrome_options.add_argument('--no-sandbox')
 		chrome_options.add_argument('--disable-infobars')
+		# Much better when working in non-headless mode
+		chrome_options.add_argument('--disable-backgrounding-occluded-windows')
+		chrome_options.add_argument('--disable-renderer-backgrounding')
+		chrome_options.add_argument('--disable-background-timer-throttling')
 
 		# Initialize the Chrome driver
 		driver = webdriver.Chrome(
