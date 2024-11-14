@@ -90,7 +90,7 @@ class AgentState(BaseModel):
 	next_goal: str
 
 
-class DynamicActions(BaseModel):
+class DynamicActions(ControllerActions):
 	"""Base class combining controller and custom actions"""
 
 	_cached_model: ClassVar[Optional[Type[DynamicActions]]] = None
