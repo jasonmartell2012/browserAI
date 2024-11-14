@@ -94,4 +94,4 @@ class ControllerService:
 			return ActionResult()
 
 		except Exception as e:
-			return ActionResult(error=f'Error executing action: {str(e)}')
+			raise Exception(f'Error while executing action {action}: {str(e)}') from e

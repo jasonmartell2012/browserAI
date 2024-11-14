@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from inspect import signature
-from typing import Any, Callable, ClassVar, Dict, Optional, Type, TypeVar
+from typing import Any, Callable, ClassVar, Dict, Optional, Type, TypeVar, Union
 
 from openai import RateLimitError
 from pydantic import BaseModel, ConfigDict, ValidationError, create_model
@@ -182,7 +182,7 @@ class DynamicOutput(BaseModel):
 class AgentHistory(BaseModel):
 	"""History item for agent actions"""
 
-	model_output: Optional[DynamicOutput]
+	model_output: Union[DynamicOutput, BaseModel]
 	result: ActionResult
 	state: ControllerPageState
 

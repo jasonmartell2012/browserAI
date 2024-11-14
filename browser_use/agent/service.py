@@ -133,9 +133,9 @@ class AgentService:
 			self.consecutive_failures += 1
 
 		else:
-			error_msg = f'Unexpected error: {str(error)}'
+			error_msg = f'Unknown error: {str(error)}'
 			logger.error(f'{prefix}{error_msg}')
-			raise Exception(error_msg)
+			self.consecutive_failures += 1
 
 		return ActionResult(error=error_msg)
 
@@ -163,11 +163,10 @@ class AgentService:
 		model_output: Optional[DynamicOutput],
 		state: ControllerPageState,
 		result: ActionResult,
-	) -> AgentHistory:
+	) -> None:
 		"""Create and store history item"""
 		history_item = AgentHistory(model_output=model_output, result=result, state=state)
 		self.action_history.append(history_item)
-		return history_item
 
 	@time_execution_async('--get_next_action')
 	async def get_next_action(self, state: ControllerPageState) -> Any:
