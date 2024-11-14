@@ -86,10 +86,7 @@ async def main():
 	model = ChatOpenAI(model='gpt-4o')
 	agent = Agent(task=task, llm=model, controller=controller)
 
-	result = await agent.run()
-
-	for item in result:
-		print(item.model_output)
+	await agent.run()
 
 
 if __name__ == '__main__':
