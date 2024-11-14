@@ -12,7 +12,7 @@ from openai import RateLimitError
 from pydantic import BaseModel, ValidationError
 
 from browser_use.agent.prompts import AgentMessagePrompt, AgentSystemPrompt
-from browser_use.agent.views import ActionResult, AgentAction, AgentError, AgentHistory, AgentOutput
+from browser_use.agent.views import ActionResult, AgentError, AgentHistory, AgentOutput
 from browser_use.browser.views import BrowserState
 from browser_use.controller.service import Controller
 from browser_use.utils import time_execution_async

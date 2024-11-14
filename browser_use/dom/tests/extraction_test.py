@@ -2,6 +2,7 @@ import time
 
 from tokencost import count_string_tokens
 
+from browser_use.agent.views import AgentAction
 from browser_use.browser.service import Browser
 from browser_use.dom.service import DomService
 from browser_use.utils import time_execution_sync
@@ -11,11 +12,11 @@ from browser_use.utils import time_execution_sync
 def test_process_html_file():
 	browser = Browser(headless=False)
 
-	driver = browser.init()
+	driver = browser._get_driver()
 
 	dom_service = DomService(driver)
 
-	browser.go_to_url('https://www.kayak.ch')
+	driver.get('https://kayak.com/flights')
 	# browser.go_to_url('https://google.com/flights')
 
 	time.sleep(2)

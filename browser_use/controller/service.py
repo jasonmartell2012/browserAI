@@ -2,6 +2,7 @@ import logging
 
 from browser_use.agent.views import ActionResult, AgentAction
 from browser_use.browser.service import Browser, MainContentExtractor
+from browser_use.browser.views import TabInfo
 from browser_use.controller.registry.service import Registry
 from browser_use.controller.views import (
 	ClickElementAction,
@@ -88,11 +89,29 @@ class Controller:
 		# Tab Management Actions
 		@self.registry.action('Switch tab', param_model=SwitchTabAction, requires_browser=True)
 		def switch_tab(params: SwitchTabAction, browser: Browser):
-			browser.switch_tab(params.handle)
+			driver = browser._get_driver()
+
+			# Verify handle exists
+			if params.handle not in driver.window_handles:
+				raise ValueError(f'Tab handle {params.handle} not found')
+
+			# Only switch if we're not already on that tab
+			if params.handle != driver.current_window_handle:
+				driver.switch_to.window(params.handle)
+				browser._current_handle = params.handle
+				# Wait for tab to be ready
+				browser.wait_for_page_load()
+
+			# Update and return tab info
+			tab_info = TabInfo(handle=params.handle, url=driver.current_url, title=driver.title)
+			browser._tab_cache[params.handle] = tab_info
 
 		@self.registry.action('Open new tab', param_model=OpenTabAction, requires_browser=True)
 		def open_tab(params: OpenTabAction, browser: Browser):
-			browser.open_tab(params.url)
+			driver = browser._get_driver()
+			driver.execute_script(f'window.open("{params.url}", "_blank");')
+			browser.wait_for_page_load()
+			browser.handle_new_tab()
 
 		# Content Actions
 		@self.registry.action(
@@ -101,12 +120,12 @@ class Controller:
 		def extract_content(params: ExtractPageContentAction, browser: Browser):
 			driver = browser._get_driver()
 			content = MainContentExtractor.extract(driver.page_source, output_format=params.value)
-			return content
+			return ActionResult(extracted_content=content)
 
 		@self.registry.action('Complete task', param_model=DoneAction, requires_browser=True)
 		def done(params: DoneAction, browser: Browser):
 			logger.info(f'✅ Done on page {browser._cached_state.url}\n\n: {params.text}')
-			return params.text
+			return ActionResult(is_done=True, extracted_content=params.text)
 
 	def action(self, description: str, **kwargs):
 		"""Decorator for registering custom actions"""
@@ -119,7 +138,12 @@ class Controller:
 			for action_name, params in action.model_dump(exclude_unset=True).items():
 				if params is not None:
 					result = self.registry.execute_action(action_name, params, browser=self.browser)
-					return ActionResult(extracted_content=str(result) if result else None)
+					if isinstance(result, str):
+						return ActionResult(extracted_content=result)
+					elif isinstance(result, ActionResult):
+						return result
+					else:
+						raise ValueError(f'Invalid action result type: {type(result)} of {result}')
 			return ActionResult()
 		except Exception as e:
 			return ActionResult(error=str(e))
