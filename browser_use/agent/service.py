@@ -3,7 +3,7 @@ from __future__ import annotations
 import json
 import logging
 import time
-from typing import Any, Optional, Type, TypeVar, cast
+from typing import Any, Optional, TypeVar
 
 from dotenv import load_dotenv
 from langchain_core.language_models.chat_models import BaseChatModel
@@ -20,8 +20,9 @@ from browser_use.agent.views import (
 	DynamicActions,
 	DynamicOutput,
 )
+from browser_use.browser.views import BrowserState
 from browser_use.controller.service import Controller
-from browser_use.controller.views import ControllerActions, ControllerPageState
+from browser_use.controller.views import ControllerActions
 from browser_use.utils import time_execution_async
 
 load_dotenv()
@@ -112,7 +113,7 @@ class Agent:
 		self._update_messages_with_result(result)
 		self._make_history_item(model_output, state, result)
 
-	def _handle_step_error(self, error: Exception, state: ControllerPageState) -> ActionResult:
+	def _handle_step_error(self, error: Exception, state: BrowserState) -> ActionResult:
 		"""Handle all types of errors that can occur during a step"""
 		error_msg = str(error)
 		prefix = f'Failed {self.consecutive_failures + 1}/{self.max_failures} times:\n '
@@ -162,7 +163,7 @@ class Agent:
 	def _make_history_item(
 		self,
 		model_output: DynamicOutput | None,
-		state: ControllerPageState,
+		state: BrowserState,
 		result: ActionResult,
 	) -> None:
 		"""Create and store history item"""
@@ -170,7 +171,7 @@ class Agent:
 		self.history.append(history_item)
 
 	@time_execution_async('--get_next_action')
-	async def get_next_action(self, state: ControllerPageState) -> DynamicOutput:
+	async def get_next_action(self, state: BrowserState) -> DynamicOutput:
 		"""Get next action from LLM based on current state"""
 		new_message = AgentMessagePrompt(state).get_user_message()
 		input_messages = self.messages + [new_message]
@@ -184,7 +185,7 @@ class Agent:
 
 		return response
 
-	def _update_message_history(self, state: ControllerPageState, response: Any) -> None:
+	def _update_message_history(self, state: BrowserState, response: Any) -> None:
 		"""Update message history with new interactions"""
 		history_message = AgentMessagePrompt(state).get_message_for_history()
 		self.messages.append(history_message)

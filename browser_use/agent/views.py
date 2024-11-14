@@ -1,15 +1,15 @@
 from __future__ import annotations
 
 from inspect import signature
-from typing import Any, Callable, ClassVar, Dict, Optional, Type, TypeVar, Union
+from typing import Any, Callable, ClassVar, Dict, Optional, Type
 
 from openai import RateLimitError
 from pydantic import BaseModel, ConfigDict, Field, ValidationError, create_model
 
+from browser_use.browser.views import BrowserState
 from browser_use.controller.views import (
 	ClickElementControllerAction,
 	ControllerActions,
-	ControllerPageState,
 	InputTextControllerAction,
 )
 
@@ -177,7 +177,7 @@ class AgentHistory(BaseModel):
 
 	model_output: DynamicOutput | None
 	result: ActionResult
-	state: ControllerPageState
+	state: BrowserState
 
 	model_config = ConfigDict(arbitrary_types_allowed=True, protected_namespaces=())
 

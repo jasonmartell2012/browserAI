@@ -1,6 +1,6 @@
 from langchain_core.messages import HumanMessage, SystemMessage
 
-from browser_use.controller.views import ControllerPageState
+from browser_use.browser.views import BrowserState
 
 
 class AgentSystemPrompt:
@@ -92,7 +92,7 @@ class AgentSystemPrompt:
 
 
 class AgentMessagePrompt:
-	def __init__(self, state: ControllerPageState):
+	def __init__(self, state: BrowserState):
 		self.state = state
 
 	def get_user_message(self) -> HumanMessage:

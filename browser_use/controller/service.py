@@ -5,7 +5,6 @@ from browser_use.browser.service import Browser
 from browser_use.browser.views import BrowserState
 from browser_use.controller.views import (
 	ControllerActions,
-	ControllerPageState,
 )
 from browser_use.utils import time_execution_sync
 
@@ -27,9 +26,9 @@ class Controller:
 
 	def __init__(self, keep_open: bool = False):
 		self.browser = Browser(keep_open=keep_open)
-		self.cached_state: BrowserState | None = None
+		self.cached_state = self.get_state()
 
-	def get_state(self, use_vision: bool = False) -> ControllerPageState:
+	def get_state(self, use_vision: bool = False) -> BrowserState:
 		self.cached_state = self.browser.get_state(use_vision=use_vision)
 		return self.cached_state
 

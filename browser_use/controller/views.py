@@ -1,4 +1,4 @@
-from typing import Literal, Optional
+from typing import List, Literal, Optional
 
 from pydantic import BaseModel
 
@@ -75,17 +75,3 @@ class ControllerActions(BaseModel):
 - Complete task:
    {"done": {"text": "Final result message"}}
 """
-
-
-class ControllerPageState(BrowserState):
-	screenshot: Optional[str] = None
-	tabs: list[dict] = []  # Add tabs info to state
-
-	def model_dump(self) -> dict:
-		dump = super().model_dump()
-		# Add a summary of available tabs
-		if self.tabs:
-			dump['available_tabs'] = [
-				f"Tab {i+1}: {tab['title']} ({tab['url']})" for i, tab in enumerate(self.tabs)
-			]
-		return dump

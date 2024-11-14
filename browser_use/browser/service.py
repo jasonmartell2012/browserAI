@@ -20,8 +20,7 @@ from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.support.ui import WebDriverWait
 from webdriver_manager.chrome import ChromeDriverManager
 
-from browser_use.browser.views import BrowserState
-from browser_use.controller.views import ControllerPageState
+from browser_use.browser.views import BrowserState, TabInfo
 from browser_use.dom.service import DomService
 from browser_use.dom.views import SelectorMap
 from browser_use.utils import time_execution_sync
@@ -36,8 +35,8 @@ class Browser:
 		self._ob = Screenshot.Screenshot()
 		self.MINIMUM_WAIT_TIME = 0.5
 		self.MAXIMUM_WAIT_TIME = 5
-		self._current_handle = None  # Track current handle
-		self._tab_cache = {}
+		self._current_handle = None
+		self._tab_cache: dict[str, TabInfo] = {}
 		self.keep_open = keep_open
 
 	def init(self) -> webdriver.Chrome:
@@ -109,9 +108,9 @@ class Browser:
 			if hasattr(self, 'driver') and self.driver:
 				try:
 					self.driver.quit()
-				except:
+					self.driver = None
+				except Exception:
 					pass
-				self.driver = None
 			raise
 
 	def _get_driver(self) -> webdriver.Chrome:
@@ -149,18 +148,26 @@ class Browser:
 		if remaining > 0:
 			time.sleep(remaining)
 
-	def get_updated_state(self) -> BrowserState:
+	def get_updated_state(self, use_vision: bool = False) -> BrowserState:
 		"""
 		Update and return state.
 		"""
 		driver = self._get_driver()
 		dom_service = DomService(driver)
 		content = dom_service.get_clickable_elements()
+
+		screenshot_b64 = None
+		if use_vision:
+			screenshot_b64 = self.take_screenshot(selector_map=content.selector_map)
+
 		self.current_state = BrowserState(
 			items=content.items,
 			selector_map=content.selector_map,
 			url=driver.current_url,
 			title=driver.title,
+			current_tab_handle=self._current_handle or driver.current_window_handle,
+			tabs=self.get_tabs_info(),
+			screenshot=screenshot_b64,
 		)
 
 		return self.current_state
@@ -417,6 +424,7 @@ class Browser:
 		Clicks an element using its index from the selector map.
 		Can click multiple times if specified.
 		"""
+
 		if index not in state.selector_map:
 			raise Exception(
 				f'Element index {index} not found in selector map. Only use indexes which exist in the input'
@@ -446,7 +454,7 @@ class Browser:
 		if current_handles > initial_handles:
 			return self.handle_new_tab()
 
-	def handle_new_tab(self) -> dict:
+	def handle_new_tab(self) -> TabInfo:
 		"""Handle newly opened tab and switch to it"""
 		driver = self._get_driver()
 		handles = driver.window_handles
@@ -454,50 +462,33 @@ class Browser:
 
 		# Switch to new tab
 		driver.switch_to.window(new_handle)
-		self._current_handle = new_handle  # Update current handle
+		self._current_handle = new_handle
 
 		# Wait for page load
 		self.wait_for_page_load()
 
-		# Get and cache tab info
-		tab_info = {
-			'handle': new_handle,
-			'url': driver.current_url,
-			'title': driver.title,
-			'is_current': True,
-		}
+		# Create and cache tab info
+		tab_info = TabInfo(handle=new_handle, url=driver.current_url, title=driver.title)
 		self._tab_cache[new_handle] = tab_info
-
-		# Update is_current for all tabs
-		for handle in self._tab_cache:
-			self._tab_cache[handle]['is_current'] = handle == new_handle
 
 		return tab_info
 
-	def get_tabs_info(self) -> list[dict]:
+	def get_tabs_info(self) -> list[TabInfo]:
 		"""Get information about all tabs"""
 		driver = self._get_driver()
 		current_handle = driver.current_window_handle
-		self._current_handle = current_handle  # Update current handle
+		self._current_handle = current_handle
 
 		tabs_info = []
 		for handle in driver.window_handles:
-			is_current = handle == current_handle
-
 			# Use cached info if available, otherwise get new info
 			if handle in self._tab_cache:
 				tab_info = self._tab_cache[handle]
-				tab_info['is_current'] = is_current
 			else:
 				# Only switch if we need to get info
-				if not is_current:
+				if handle != current_handle:
 					driver.switch_to.window(handle)
-				tab_info = {
-					'handle': handle,
-					'url': driver.current_url,
-					'title': driver.title,
-					'is_current': is_current,
-				}
+				tab_info = TabInfo(handle=handle, url=driver.current_url, title=driver.title)
 				self._tab_cache[handle] = tab_info
 
 			tabs_info.append(tab_info)
@@ -508,7 +499,7 @@ class Browser:
 
 		return tabs_info
 
-	def switch_tab(self, handle: str) -> dict:
+	def switch_tab(self, handle: str) -> TabInfo:
 		"""Switch to specified tab and return its info"""
 		driver = self._get_driver()
 
@@ -517,19 +508,14 @@ class Browser:
 			raise ValueError(f'Tab handle {handle} not found')
 
 		# Only switch if we're not already on that tab
-		current_handle = driver.current_window_handle
-		if handle != current_handle:
+		if handle != driver.current_window_handle:
 			driver.switch_to.window(handle)
+			self._current_handle = handle
 			# Wait for tab to be ready
 			self.wait_for_page_load()
 
 		# Update and return tab info
-		tab_info = {
-			'handle': handle,
-			'url': driver.current_url,
-			'title': driver.title,
-			'is_current': True,
-		}
+		tab_info = TabInfo(handle=handle, url=driver.current_url, title=driver.title)
 		self._tab_cache[handle] = tab_info
 		return tab_info
 
@@ -540,24 +526,8 @@ class Browser:
 		return self.handle_new_tab()
 
 	@time_execution_sync('--get_state')
-	def get_state(self, use_vision: bool = False) -> ControllerPageState:
+	def get_state(self, use_vision: bool = False) -> BrowserState:
 		"""
 		Get the current state of the browser including page content and tab information.
 		"""
-		browser_state = self.get_updated_state()
-
-		# Get tab information without switching
-		tabs = self.get_tabs_info()
-
-		screenshot_b64 = None
-		if use_vision:
-			screenshot_b64 = self.take_screenshot(selector_map=browser_state.selector_map)
-
-		return ControllerPageState(
-			items=browser_state.items,
-			url=browser_state.url,
-			title=browser_state.title,
-			selector_map=browser_state.selector_map,
-			screenshot=screenshot_b64,
-			tabs=tabs,
-		)
+		return self.get_updated_state(use_vision=use_vision)
