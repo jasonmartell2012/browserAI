@@ -12,17 +12,9 @@ from openai import RateLimitError
 from pydantic import BaseModel, ValidationError
 
 from browser_use.agent.prompts import AgentMessagePrompt, AgentSystemPrompt
-from browser_use.agent.views import (
-	ActionRegistry,
-	ActionResult,
-	AgentAction,
-	AgentError,
-	AgentHistory,
-	AgentOutput,
-)
+from browser_use.agent.views import ActionResult, AgentAction, AgentError, AgentHistory, AgentOutput
 from browser_use.browser.views import BrowserState
 from browser_use.controller.service import Controller
-from browser_use.controller.views import ControllerActions
 from browser_use.utils import time_execution_async
 
 load_dotenv()
@@ -68,39 +60,33 @@ class Agent:
 			logger.info(f'Saving conversation to {save_conversation_path}')
 
 	def _setup_action_models(self) -> None:
-		"""Setup dynamic action and output models"""
-		custom_actions = ActionRegistry.get_registered_actions()
-		self.DynamicActions = AgentAction.combine_actions(custom_actions)
-		self.OutputModel = AgentOutput.type_with_custom_actions(custom_actions=self.DynamicActions)
+		"""Setup dynamic action models from controller's registry"""
+		# Get the dynamic action model from controller's registry
+		self.DynamicActions = self.controller.registry.create_action_model()
+		# Create output model with the dynamic actions
+		self.OutputModel = AgentOutput.type_with_custom_actions(self.DynamicActions)
 
 	def _initialize_messages(self) -> list[BaseMessage]:
 		"""Initialize message history with system and first message"""
+		# Get action descriptions from controller's registry
+		action_descriptions = self.controller.registry.get_prompt_description()
+
 		system_prompt = AgentSystemPrompt(
-			self.task, default_action_description=self._get_action_description()
+			self.task, action_description=action_descriptions
 		).get_system_message()
+
 		first_message = HumanMessage(content=f'Your task is: {self.task}')
 		return [system_prompt, first_message]
-
-	def _get_action_description(self) -> str:
-		"""Get combined description of all available actions"""
-		base_description = ControllerActions.description()
-		custom_descriptions = '\n'.join(
-			action.prompt_description for action in ActionRegistry.get_registered_actions()
-		)
-		return base_description + custom_descriptions if custom_descriptions else base_description
 
 	@time_execution_async('--step')
 	async def step(self) -> None:
 		"""Execute one step of the task"""
-
 		logger.info(f'\n📍 Step {self.n_steps}')
-		state = self.controller.get_state(use_vision=self.use_vision)
+		state = self.controller.browser.get_state(use_vision=self.use_vision)
 
 		try:
 			model_output = await self.get_next_action(state)
-			action = model_output.action
-			result = self._execute_action(action)
-
+			result = self.controller.act(model_output.action)
 			# Success
 			self.consecutive_failures = 0
 
@@ -113,43 +99,21 @@ class Agent:
 
 	def _handle_step_error(self, error: Exception, state: BrowserState) -> ActionResult:
 		"""Handle all types of errors that can occur during a step"""
-		error_msg = str(error)
+		error_msg = AgentError.format_error(error)
 		prefix = f'Failed {self.consecutive_failures + 1}/{self.max_failures} times:\n '
 
-		if isinstance(error, ValidationError):
-			error_msg = f'{AgentError.VALIDATION_ERROR}\nDetails: {str(error)}'
+		if isinstance(error, (ValidationError, ValueError)):
 			logger.error(f'{prefix}{error_msg}')
 			self.consecutive_failures += 1
-
 		elif isinstance(error, RateLimitError):
-			error_msg = f'{AgentError.RATE_LIMIT_ERROR}\nWaiting {self.retry_delay} seconds...'
 			logger.warning(f'{prefix}{error_msg}')
 			time.sleep(self.retry_delay)
 			self.consecutive_failures += 1
-
-		elif isinstance(error, ValueError):
-			error_msg = f'{AgentError.NO_VALID_ACTION}\n{error}'
-			logger.error(f'{prefix}{error_msg}')
-			self.consecutive_failures += 1
-
 		else:
-			error_msg = f'Unknown error: {str(error)}'
 			logger.error(f'{prefix}{error_msg}')
 			self.consecutive_failures += 1
 
 		return ActionResult(error=error_msg)
-
-	def _execute_action(self, action: Any) -> ActionResult:
-		"""Execute the appropriate action type"""
-		if action.is_controller_action():
-			return self.controller.act(action)
-
-		elif action.is_custom_action():
-			custom_action, params = action.get_custom_action_and_params()
-			return custom_action.execute(params)
-
-		else:
-			raise ValueError(f'Unknown action: {action}')
 
 	def _update_messages_with_result(self, result: ActionResult) -> None:
 		"""Update message history with action results"""

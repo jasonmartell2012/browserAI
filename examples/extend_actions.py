@@ -1,73 +1,96 @@
-"""
-@dev You need to add ANTHROPIC_API_KEY to your environment variables.
-"""
-
 import os
 import sys
-from typing import Optional
 
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 import asyncio
+from typing import List, Optional
 
 from langchain_openai import ChatOpenAI
+from pydantic import BaseModel
 
 from browser_use.agent.service import Agent
-from browser_use.agent.views import ActionRegistry
+from browser_use.browser.service import Browser
+from browser_use.controller.service import Controller
+
+# Initialize controller first
+controller = Controller()
 
 
-@ActionRegistry.register(description='Save job details to file')
-def save_job_to_file(title: str, link: str, company: str, salary: str) -> None:
+# Action Models
+class JobDetails(BaseModel):
+	title: str
+	company: str
+	job_link: str
+	salary: Optional[str] = None
+
+
+@controller.action('Save job details which you found on page', param_model=JobDetails)
+def save_job(params: JobDetails):
 	with open('jobs.txt', 'a') as f:
-		f.write(f'{title} - {link} - {company} - {salary}\n')
+		f.write(f'{params.title} at {params.company}: {params.salary}\n')
 
 
-@ActionRegistry.register(description='Save people who starred the repo to file')
-def save_starred_people(usernames: list[str]) -> None:
+class StarredPeople(BaseModel):
+	usernames: List[str]
+
+
+@controller.action('Save people who starred the repo', param_model=StarredPeople)
+def save_starred_people(params: StarredPeople):
 	with open('starred_people.txt', 'a') as f:
-		for username in usernames:
+		for username in params.usernames:
 			f.write(f'{username}\n')
 
 
-@ActionRegistry.register(description='Read jobs from file you saved before')
-def read_jobs_from_file() -> str:
-	with open('jobs.txt', 'r') as f:
-		return f.read()
+# Browser-requiring action example
+class PageSaver(BaseModel):
+	filename: str
 
 
-@ActionRegistry.register(
-	description='Call this action if you need more information from the user e.g. login credentials'
-)
-def ask_human_for_more_information(question: str) -> str:
-	answer = input('\n' + question + '\nInput: \n')
-	return answer
+@controller.action('Save current page info', param_model=PageSaver, requires_browser=True)
+def save_page_info(params: PageSaver, browser: Browser):
+	state = browser.get_state()
+	with open(params.filename, 'w') as f:
+		f.write(f'URL: {state.url}\n')
+		f.write(f'Title: {state.title}\n')
+		f.write(f'HTML: {state.items}\n')
 
 
-@ActionRegistry.register(description='Save socks to file')
-def save_socks_to_file(socks: list[str]) -> None:
-	with open('socks.txt', 'a') as f:
-		for sock in socks:
-			f.write(f'{sock}\n')
+class Job(BaseModel):
+	title: str
+	link: str
+	company: str
+	salary: Optional[str] = None
+
+
+class Jobs(BaseModel):
+	jobs: List[Job]
+
+
+@controller.action('Save jobs', param_model=Jobs, requires_browser=True)
+def save_jobs(params: Jobs, browser: Browser):
+	with open('jobs.txt', 'a') as f:
+		for job in params.jobs:
+			f.write(f'{job.title} at {job.company}: {job.salary} ({job.link})\n')
+
+
+# Without Pydantic model - using simple parameters
+@controller.action('Ask user for information')
+def ask_human(question: str, display_question: bool) -> str:
+	return input(f'\n{question}\nInput: ')
 
 
 async def main():
-	task = 'Find 10 software developer jobs in San Francisco at YC startups in google and save them to the file.'
-	# task = 'Find 10 flights from San Francisco to New York in one way in skyscanner and save them to the file.'
-	# task = 'Go to github to https://github.com/gregpr07/browser-use repo and get all people who starred the repo, save them to the file and click to the next page until you get all pages.'
-	# task = 'Read jobs from file and start applying for them one by one - if you need more information from the user call ask_human_for_more_information action.'
-	task = 'I want socks with a theme of friends tv show and find the cheapest ones on amazon.'
+	task = 'Find 10 software developer jobs in San Francisco at YC startups in google and save the jobs to a file. Then ask human for more information'
+
 	model = ChatOpenAI(model='gpt-4o')
-	agent = Agent(task, model)
+	agent = Agent(task=task, llm=model, controller=controller)
 
 	result = await agent.run()
 
 	for item in result:
-		# print model outputs
 		print(item.model_output)
 
 
 if __name__ == '__main__':
 	asyncio.run(main())
-
-
-# run with: python -m examples.extend_actions

@@ -2,76 +2,39 @@ from typing import List, Literal, Optional
 
 from pydantic import BaseModel
 
-from browser_use.browser.views import BrowserState
+from browser_use.browser.service import Browser
 
 
-class SearchGoogleControllerAction(BaseModel):
+# Action Input Models
+class SearchGoogleAction(BaseModel):
 	query: str
 
 
-class GoToUrlControllerAction(BaseModel):
+class GoToUrlAction(BaseModel):
 	url: str
 
 
-class ClickElementControllerAction(BaseModel):
+class ClickElementAction(BaseModel):
 	index: int
 	num_clicks: int = 1
 
 
-class InputTextControllerAction(BaseModel):
+class InputTextAction(BaseModel):
 	index: int
 	text: str
 
 
-class DoneControllerAction(BaseModel):
+class DoneAction(BaseModel):
 	text: str
 
 
-class SwitchTabControllerAction(BaseModel):
-	handle: str  # The window handle to switch to
+class SwitchTabAction(BaseModel):
+	handle: str
 
 
-class OpenTabControllerAction(BaseModel):
+class OpenTabAction(BaseModel):
 	url: str
 
 
-class ControllerActions(BaseModel):
-	"""
-	Controller actions you can use to interact.
-	"""
-
-	search_google: Optional[SearchGoogleControllerAction] = None
-	go_to_url: Optional[GoToUrlControllerAction] = None
-	nothing: Optional[Literal[True]] = None
-	go_back: Optional[Literal[True]] = None
-	done: Optional[DoneControllerAction] = None
-	click_element: Optional[ClickElementControllerAction] = None
-	input_text: Optional[InputTextControllerAction] = None
-	extract_page_content: Optional[Literal[True]] = None
-	switch_tab: Optional[SwitchTabControllerAction] = None
-	open_tab: Optional[OpenTabControllerAction] = None
-
-	@staticmethod
-	def description() -> str:
-		return """
-- Search Google:
-   {"search_google": {"query": "Your search query"}}
-- Navigate to URL:
-   {"go_to_url": {"url": "https://example.com"}}
-- Wait/Do nothing:
-   {"nothing": true}
-- Go back:
-   {"go_back": true}
-- Click an interactive element by its given index. If you can be more efficient do it by clicking multiple times at once, use the num_clicks parameter (default is 1):
-   {"click_element": {"index": 1, "num_clicks": 2}}
-- Input text into an interactive element by its index:
-   {"input_text": {"index": 1, "text": "Your text"}}
-- Get page content:
-   {"extract_page_content": true}
-- Open new tab:
-   {"open_tab": {"url": "https://example.com"}}
-- Switch tab:
-   {"switch_tab": {"handle": "tab-id"}}
-- Complete task:
-   {"done": {"text": "Final result message"}}
-"""
+class ExtractPageContentAction(BaseModel):
+	value: Literal['text', 'markdown', 'html'] = 'text'

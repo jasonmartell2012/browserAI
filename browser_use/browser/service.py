@@ -31,21 +31,19 @@ logger = logging.getLogger(__name__)
 class Browser:
 	def __init__(self, headless: bool = False, keep_open: bool = False):
 		self.headless = headless
-		self.driver: webdriver.Chrome | None = None
-		self._ob = Screenshot.Screenshot()
+		self.keep_open = keep_open
 		self.MINIMUM_WAIT_TIME = 0.5
 		self.MAXIMUM_WAIT_TIME = 5
-		self._current_handle = None
 		self._tab_cache: dict[str, TabInfo] = {}
-		self.keep_open = keep_open
+		self._current_handle = None
+		self._ob = Screenshot.Screenshot()
 
-	def init(self) -> webdriver.Chrome:
-		"""
-		Sets up and returns a Selenium WebDriver instance with anti-detection measures.
+		# Initialize driver during construction
+		self.driver: webdriver.Chrome | None = self._setup_webdriver()
+		self._cached_state = self._update_state()
 
-		Returns:
-		    webdriver.Chrome: Configured Chrome WebDriver instance
-		"""
+	def _setup_webdriver(self) -> webdriver.Chrome:
+		"""Sets up and returns a Selenium WebDriver instance with anti-detection measures."""
 		try:
 			# if webdriver is not starting, try to kill it or rm -rf ~/.wdm
 			chrome_options = Options()
@@ -99,7 +97,6 @@ class Browser:
 				},
 			)
 
-			self.driver = driver
 			return driver
 
 		except Exception as e:
@@ -115,7 +112,7 @@ class Browser:
 
 	def _get_driver(self) -> webdriver.Chrome:
 		if self.driver is None:
-			self.driver = self.init()
+			self.driver = self._setup_webdriver()
 		return self.driver
 
 	def wait_for_page_load(self):
@@ -148,7 +145,7 @@ class Browser:
 		if remaining > 0:
 			time.sleep(remaining)
 
-	def get_updated_state(self, use_vision: bool = False) -> BrowserState:
+	def _update_state(self, use_vision: bool = False) -> BrowserState:
 		"""
 		Update and return state.
 		"""
@@ -190,44 +187,6 @@ class Browser:
 			self.close()
 
 	# region - Browser Actions
-
-	def search_google(self, query: str):
-		"""
-		@dev TODO: add serp api call here
-		"""
-		driver = self._get_driver()
-		driver.get(f'https://www.google.com/search?q={query}')
-		self.wait_for_page_load()
-
-	def go_to_url(self, url: str):
-		driver = self._get_driver()
-		driver.get(url)
-		self.wait_for_page_load()
-
-	def go_back(self):
-		driver = self._get_driver()
-		driver.back()
-		self.wait_for_page_load()
-
-	def refresh(self):
-		driver = self._get_driver()
-		driver.refresh()
-		self.wait_for_page_load()
-
-	def extract_page_content(self, value: Literal['text', 'markdown'] = 'markdown') -> str:
-		"""
-		TODO: switch to a better parser/extractor
-		"""
-		driver = self._get_driver()
-		content = MainContentExtractor.extract(driver.page_source, output_format=value)  # type: ignore TODO
-		return content
-
-	def done(self, text: str):
-		"""
-		Ends the task and waits for further instructions.
-		"""
-		logger.info(f'✅ Done on page {self.current_state.url}\n\n: {text}')
-		return text
 
 	def take_screenshot(self, selector_map: SelectorMap | None, full_page: bool = False) -> str:
 		"""
@@ -357,16 +316,6 @@ class Browser:
 				f'Failed to input text into element with xpath: {xpath}. Error: {str(e)}'
 			)
 
-	def input_text_by_index(self, index: int, text: str, state: BrowserState):
-		if index not in state.selector_map:
-			raise Exception(
-				f'Element index {index} not found in selector map. Only use indexes from which exist in the input'
-			)
-
-		xpath = state.selector_map[index]
-		self._input_text_by_xpath(xpath, text)
-		logger.info(f'⌨️  Input text "{text}" into element {index}: {xpath}')
-
 	def _click_element_by_xpath(self, xpath: str):
 		"""
 		Optimized method to click an element using xpath.
@@ -418,43 +367,7 @@ class Browser:
 		except Exception as e:
 			raise Exception(f'Failed to click element with xpath: {xpath}. Error: {str(e)}')
 
-	@time_execution_sync('--click')
-	def click_element_by_index(self, index: int, state: BrowserState, num_clicks: int = 1):
-		"""
-		Clicks an element using its index from the selector map.
-		Can click multiple times if specified.
-		"""
-
-		if index not in state.selector_map:
-			raise Exception(
-				f'Element index {index} not found in selector map. Only use indexes which exist in the input'
-			)
-
-		xpath = state.selector_map[index]
-		driver = self._get_driver()
-
-		# Store initial number of tabs
-		initial_handles = len(driver.window_handles)
-
-		# Perform clicks
-		for _ in range(num_clicks):
-			try:
-				self._click_element_by_xpath(xpath)
-				msg = f'🖱️  Clicked element {index}: {xpath}'
-				if num_clicks > 1:
-					msg += f' ({_ + 1}/{num_clicks} clicks)'
-				logger.info(msg)
-
-			except Exception as e:
-				logger.warning(f'Element no longer available after {_ + 1} clicks: {str(e)}')
-				break
-
-		# Check if new tab was opened
-		current_handles = len(driver.window_handles)
-		if current_handles > initial_handles:
-			return self.handle_new_tab()
-
-	def handle_new_tab(self) -> TabInfo:
+	def handle_new_tab(self) -> None:
 		"""Handle newly opened tab and switch to it"""
 		driver = self._get_driver()
 		handles = driver.window_handles
@@ -470,8 +383,6 @@ class Browser:
 		# Create and cache tab info
 		tab_info = TabInfo(handle=new_handle, url=driver.current_url, title=driver.title)
 		self._tab_cache[new_handle] = tab_info
-
-		return tab_info
 
 	def get_tabs_info(self) -> list[TabInfo]:
 		"""Get information about all tabs"""
@@ -499,8 +410,16 @@ class Browser:
 
 		return tabs_info
 
-	def switch_tab(self, handle: str) -> TabInfo:
-		"""Switch to specified tab and return its info"""
+	@time_execution_sync('--get_state')
+	def get_state(self, use_vision: bool = False) -> BrowserState:
+		"""
+		Get the current state of the browser including page content and tab information.
+		"""
+		self._cached_state = self._update_state(use_vision=use_vision)
+		return self._cached_state
+
+	def switch_tab(self, handle: str) -> None:
+		"""Switch to specified tab"""
 		driver = self._get_driver()
 
 		# Verify handle exists
@@ -517,17 +436,94 @@ class Browser:
 		# Update and return tab info
 		tab_info = TabInfo(handle=handle, url=driver.current_url, title=driver.title)
 		self._tab_cache[handle] = tab_info
-		return tab_info
 
-	def open_tab(self, url: str):
+	def open_tab(self, url: str) -> None:
 		driver = self._get_driver()
 		driver.execute_script(f'window.open("{url}", "_blank");')
 		self.wait_for_page_load()
-		return self.handle_new_tab()
+		self.handle_new_tab()
 
-	@time_execution_sync('--get_state')
-	def get_state(self, use_vision: bool = False) -> BrowserState:
+	def click_element_by_index(self, index: int, num_clicks: int = 1):
 		"""
-		Get the current state of the browser including page content and tab information.
+		Clicks an element using its index from the selector map.
+		Can click multiple times if specified.
 		"""
-		return self.get_updated_state(use_vision=use_vision)
+		state = self._cached_state
+		if index not in state.selector_map:
+			raise Exception(
+				f'Element index {index} not found in selector map. Only use indexes which exist in the input'
+			)
+
+		xpath = state.selector_map[index]
+		driver = self._get_driver()
+
+		# Store initial number of tabs
+		initial_handles = len(driver.window_handles)
+
+		# Perform clicks
+		for _ in range(num_clicks):
+			try:
+				self._click_element_by_xpath(xpath)
+				msg = f'🖱️  Clicked element {index}: {xpath}'
+				if num_clicks > 1:
+					msg += f' ({_ + 1}/{num_clicks} clicks)'
+				logger.info(msg)
+
+			except Exception as e:
+				logger.warning(f'Element no longer available after {_ + 1} clicks: {str(e)}')
+				break
+
+		# Check if new tab was opened
+		current_handles = len(driver.window_handles)
+		if current_handles > initial_handles:
+			self.handle_new_tab()
+
+	def input_text_by_index(self, index: int, text: str):
+		state = self._cached_state
+		if index not in state.selector_map:
+			raise Exception(
+				f'Element index {index} not found in selector map. Only use indexes from which exist in the input'
+			)
+
+		xpath = state.selector_map[index]
+		self._input_text_by_xpath(xpath, text)
+		logger.info(f'⌨️  Input text "{text}" into element {index}: {xpath}')
+
+	def search_google(self, query: str):
+		"""
+		@dev TODO: add serp api call here
+		"""
+		driver = self._get_driver()
+
+		driver.get(f'https://www.google.com/search?q={query}')
+		self.wait_for_page_load()
+
+	def go_to_url(self, url: str):
+		driver = self._get_driver()
+		driver.get(url)
+		self.wait_for_page_load()
+
+	def go_back(self):
+		driver = self._get_driver()
+		driver.back()
+		self.wait_for_page_load()
+
+	def refresh(self):
+		driver = self._get_driver()
+		driver.refresh()
+		self.wait_for_page_load()
+
+	def extract_page_content(self, value: Literal['text', 'markdown', 'html'] = 'markdown') -> str:
+		"""
+		TODO: switch to a better parser/extractor
+		"""
+		driver = self._get_driver()
+		content = MainContentExtractor.extract(driver.page_source, output_format=value)  # type: ignore TODO
+		return content
+
+	def done(self, text: str):
+		"""
+		Ends the task and waits for further instructions.
+		"""
+		logger.info(f'✅ Done on page {self.current_state.url}\n\n: {text}')
+		return text
