@@ -152,4 +152,4 @@ class Controller:
 						raise ValueError(f'Invalid action result type: {type(result)} of {result}')
 			return ActionResult()
 		except Exception as e:
-			return ActionResult(error=str(e))
+			return ActionResult(error=str(object=e))

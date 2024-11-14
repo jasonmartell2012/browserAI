@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import logging
+import os
 import time
 from typing import Any, Optional, TypeVar
 
@@ -172,6 +173,9 @@ class Agent:
 		"""Save conversation history to file if path is specified"""
 		if not self.save_conversation_path:
 			return
+
+		# create folders if not exists
+		os.makedirs(os.path.dirname(self.save_conversation_path), exist_ok=True)
 
 		with open(self.save_conversation_path + f'_{self.n_steps}.txt', 'w') as f:
 			self._write_messages_to_file(f, input_messages)

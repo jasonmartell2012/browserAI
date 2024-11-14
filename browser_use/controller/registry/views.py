@@ -18,12 +18,14 @@ class RegisteredAction(BaseModel):
 		"""Get a description of the action for the prompt"""
 		skip_keys = ['title']
 		s = f'{self.description}: \n'
+		s += '{' + str(self.name) + ': '
 		s += str(
 			{
 				k: {sub_k: sub_v for sub_k, sub_v in v.items() if sub_k not in skip_keys}
 				for k, v in self.param_model.schema()['properties'].items()
 			}
 		)
+		s += '}'
 		return s
 
 

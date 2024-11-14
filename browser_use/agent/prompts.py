@@ -18,8 +18,8 @@ class AgentSystemPrompt:
 		return """
 {{
 	"current_state": {{
-		"valuation_previous_goal": "String starting with "Success" or "Failed:" evaluate if the previous goal was successful and if failed describe why. If unknown, write 'Unknown'",
-		"memory": "String to store progress information for the overall task to rememeber until the end of the task",
+		"valuation_previous_goal": "String starting with "Success", "Failed:" or "Unknown" to evaluate if the previous next_goal is achieved. If failed or unknown describe why.",
+		"memory": "Your memory with things you need to remeber until the end of the task for the user. You can also store overall progress in a bigger task. You have access to this in the next steps.",
 		"next_goal": "String describing the next immediate goal which can be achieved with one action"
 	}},
 	"action": {{
@@ -34,8 +34,7 @@ class AgentSystemPrompt:
 		Returns:
 		    str: Example response
 		"""
-		return """
-{"current_state": {"valuation_previous_goal": "Success", "memory": "We applied already for 3/7 jobs, 1. ..., 2. ..., 3. ...", "next_goal": "Click on the button x to apply for the next job"}, "action": {"click_element": {"index": 44,"num_clicks": 2}}}"""
+		return """{"current_state": {"valuation_previous_goal": "Success", "memory": "We applied already for 3/7 jobs, 1. ..., 2. ..., 3. ...", "next_goal": "Click on the button x to apply for the next job"}, "action": {"click_element": {"index": 44,"num_clicks": 2}}}"""
 
 	def important_rules(self) -> str:
 		"""
@@ -46,11 +45,10 @@ class AgentSystemPrompt:
 		"""
 		return """
 1. Only use indexes that exist in the input list for click or input text actions
-2. Use extract_page_content to get more page information
-3. If stuck, try alternative approaches, go back, search google
-4. Use extract_page_content followed by done action to complete task
-5. If an image is provided, use it to understand the context
-6. ALWAYS respond in the RESPONSE FORMAT with valid JSON:
+2. If stuck, try alternative approaches, e.g. go back, search google, or extract_page_content
+3. When you are done with the complete task, use the done action. Make sure to have all information the user needs and return the result.
+4. If an image is provided, use it to understand the context, the bounding boxes around the buttons have the same indexes as the interactive elements.
+6. ALWAYS respond in the RESPONSE FORMAT with valid JSON.
 7. If the page is empty use actions like "go_to_url", "search_google" or "open_tab"
 8. Remember: Choose EXACTLY ONE action per response. Invalid combinations or multiple actions will be rejected.
 9. If popups like cookies appear, accept or close them
@@ -77,12 +75,16 @@ You are an AI agent that helps users interact with websites. You receive a list 
 
 INPUT FORMAT:
 {self.input_format()}
+
 You have to respond in the following RESPONSE FORMAT: 
 {self.response_format()}
+
 Your AVAILABLE ACTIONS:
 {self.default_action_description}
+
 Example:
 {self.example_response()}
+
 IMPORTANT RULES:
 {self.important_rules()}
 """

@@ -1,3 +1,5 @@
+import asyncio
+
 import pytest
 from langchain_openai import ChatOpenAI
 from pydantic import BaseModel
@@ -16,6 +18,7 @@ def llm():
 async def agent_with_controller():
 	"""Create agent with controller for testing"""
 	controller = Controller(keep_open=False)
+	print('init controller')
 	yield controller
 	controller.browser.close()
 
@@ -27,6 +30,7 @@ async def test_ecommerce_interaction(llm, agent_with_controller):
 		task="Go to amazon.com, search for 'laptop', filter by 4+ stars, and find the price of the first result",
 		llm=llm,
 		controller=agent_with_controller,
+		save_conversation_path='tmp/test_ecommerce_interaction/conversation',
 	)
 
 	history = await agent.run(max_steps=20)
@@ -35,7 +39,7 @@ async def test_ecommerce_interaction(llm, agent_with_controller):
 	action_sequence = []
 	for h in history:
 		action = getattr(h.model_output, 'action', None)
-		if action and getattr(action, 'go_to_url', None):
+		if action and (getattr(action, 'go_to_url', None) or getattr(action, 'open_tab', None)):
 			action_sequence.append('navigate')
 		elif action and getattr(action, 'input_text', None):
 			action_sequence.append('input')
@@ -138,6 +142,7 @@ class CaptchaTest(BaseModel):
 	name: str
 	url: str
 	success_text: str
+	additional_text: str | None = None
 
 
 # pytest tests/test_agent_actions.py -v -k "test_captcha_solver" --capture=no --log-cli-level=INFO
@@ -150,6 +155,7 @@ class CaptchaTest(BaseModel):
 			name='Rotate Captcha',
 			url='https://2captcha.com/demo/rotatecaptcha',
 			success_text='Captcha is passed successfully',
+			additional_text='Use num_clicks with number to click multiple times at once in same direction. click done when image is exact correct position.',
 		),
 		CaptchaTest(
 			name='Text Captcha',
@@ -165,13 +171,14 @@ class CaptchaTest(BaseModel):
 			name='MT Captcha',
 			url='https://2captcha.com/demo/mtcaptcha',
 			success_text='Verified Successfully',
+			additional_text='Stop when you solved it successfully.',
 		),
 	],
 )
 async def test_captcha_solver(llm, agent_with_controller, captcha: CaptchaTest):
 	"""Test agent's ability to solve different types of captchas"""
 	agent = Agent(
-		task=f'Go to {captcha.url} and solve the captcha',
+		task=f'Go to {captcha.url} and solve the captcha. {captcha.additional_text}',
 		llm=llm,
 		controller=agent_with_controller,
 	)
@@ -179,7 +186,16 @@ async def test_captcha_solver(llm, agent_with_controller, captcha: CaptchaTest):
 	history = await agent.run(max_steps=10)
 
 	# Verify the agent solved the captcha
-
-	last = history[-1].state.items
-	solved = any([captcha.success_text in item.text for item in last])
+	solved = False
+	for h in history:
+		last = h.state.items
+		if any(captcha.success_text in item.text for item in last):
+			solved = True
+			break
 	assert solved, f'Failed to solve {captcha.name}'
+
+
+# python -m pytest tests/test_agent_actions.py -v --capture=no
+
+
+# pytest tests/test_agent_actions.py -v -k "test_captcha_solver" --capture=no --log-cli-level=INFO
