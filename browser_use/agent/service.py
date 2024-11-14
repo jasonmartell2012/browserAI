@@ -16,11 +16,9 @@ from browser_use.agent.views import (
 	AgentAction,
 	AgentHistory,
 	AgentState,
-	ClickElementControllerHistoryItem,
 	CustomAction,
 	DynamicActions,
 	DynamicOutput,
-	InputTextControllerHistoryItem,
 )
 from browser_use.controller.service import ControllerService
 from browser_use.controller.views import ControllerActions, ControllerPageState

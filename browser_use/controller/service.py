@@ -1,3 +1,5 @@
+import logging
+
 from browser_use.agent.views import ActionResult
 from browser_use.browser.service import BrowserService
 from browser_use.browser.views import BrowserState
@@ -6,6 +8,9 @@ from browser_use.controller.views import (
 	ControllerPageState,
 )
 from browser_use.utils import time_execution_sync
+
+logger = logging.getLogger(__name__)
+logging.basicConfig(level=logging.INFO)
 
 
 class ControllerService:
@@ -41,7 +46,7 @@ class ControllerService:
 
 		screenshot_b64 = None
 		if screenshot:
-			screenshot_b64 = self.browser.take_screenshot()
+			screenshot_b64 = self.browser.take_screenshot(selector_map=browser_state.selector_map)
 
 		return ControllerPageState(
 			items=browser_state.items,
