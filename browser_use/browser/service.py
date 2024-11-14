@@ -540,7 +540,7 @@ class Browser:
 		return self.handle_new_tab()
 
 	@time_execution_sync('--get_state')
-	def get_state(self, screenshot: bool = False) -> ControllerPageState:
+	def get_state(self, use_vision: bool = False) -> ControllerPageState:
 		"""
 		Get the current state of the browser including page content and tab information.
 		"""
@@ -550,7 +550,7 @@ class Browser:
 		tabs = self.get_tabs_info()
 
 		screenshot_b64 = None
-		if screenshot:
+		if use_vision:
 			screenshot_b64 = self.take_screenshot(selector_map=browser_state.selector_map)
 
 		return ControllerPageState(

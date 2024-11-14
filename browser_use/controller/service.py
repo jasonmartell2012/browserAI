@@ -29,8 +29,8 @@ class Controller:
 		self.browser = Browser(keep_open=keep_open)
 		self.cached_state: BrowserState | None = None
 
-	def get_state(self, screenshot: bool = False) -> ControllerPageState:
-		self.cached_state = self.browser.get_state(screenshot=screenshot)
+	def get_state(self, use_vision: bool = False) -> ControllerPageState:
+		self.cached_state = self.browser.get_state(screenshot=use_vision)
 		return self.cached_state
 
 	@time_execution_sync('--act')
