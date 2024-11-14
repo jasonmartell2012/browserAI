@@ -1,0 +1,2 @@
+tokencost>=0.1.16
+hatch>=1.13.0 
