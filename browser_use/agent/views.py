@@ -4,7 +4,7 @@ from inspect import signature
 from typing import Any, Callable, ClassVar, Dict, Optional, Type, TypeVar, Union
 
 from openai import RateLimitError
-from pydantic import BaseModel, ConfigDict, ValidationError, create_model
+from pydantic import BaseModel, ConfigDict, Field, ValidationError, create_model
 
 from browser_use.controller.views import (
 	ClickElementControllerAction,
@@ -12,8 +12,6 @@ from browser_use.controller.views import (
 	ControllerPageState,
 	InputTextControllerAction,
 )
-
-T = TypeVar('T', bound='DynamicActions')
 
 
 class Action:
@@ -97,9 +95,9 @@ class DynamicActions(ControllerActions):
 	_custom_actions: ClassVar[Dict[str, CustomAction]] = {}
 
 	@classmethod
-	def get_or_create_model(
-		cls: Type[T], custom_actions: Optional[list[CustomAction]] = None
-	) -> Type[T]:
+	def combine_actions(
+		cls, custom_actions: Optional[list[CustomAction]] = None
+	) -> Type[DynamicActions]:
 		"""Create or return cached model with combined actions"""
 		if cls._cached_model is None:
 			custom_actions = custom_actions or Action.get_registered_actions()
@@ -152,37 +150,32 @@ class InputTextControllerHistoryItem(InputTextControllerAction):
 
 
 class DynamicOutput(BaseModel):
-	"""Factory for creating Output models with dynamic actions"""
+	"""Output model for agent
 
-	_cached_model: ClassVar[Optional[Type[BaseModel]]] = None
+	@dev note: this model is extended with custom actions in AgentService. You can also use some fields that are not in this model as provided by the linter, as long as they are registered in the DynamicActions model.
+	"""
 
 	model_config = ConfigDict(arbitrary_types_allowed=True)
 
-	@classmethod
-	def get_or_create_model(cls, action_model: Type[DynamicActions]) -> Type[BaseModel]:
-		"""Create or get cached output model"""
-		if cls._cached_model is None:
-			# Create combined action model
-			combined_action = create_model(
-				'CombinedAction',
-				__base__=(action_model, ControllerActions),
-			)
+	current_state: AgentState
+	action: DynamicActions
 
-			# Create output model
-			cls._cached_model = create_model(
-				'Output',
-				__base__=BaseModel,  # Make it inherit from BaseModel
-				current_state=(AgentState, ...),
-				action=(combined_action, ...),
-			)
-
-		return cls._cached_model
+	@staticmethod
+	def type_with_custom_actions(custom_actions: Type[DynamicActions]) -> Type['DynamicOutput']:
+		"""Extend actions with custom actions"""
+		# Create a new model with proper type annotations
+		return create_model(
+			'DynamicOutput',
+			__base__=DynamicOutput,
+			action=(custom_actions, Field(...)),  # Properly annotated field with no default
+			__module__=DynamicOutput.__module__,
+		)
 
 
 class AgentHistory(BaseModel):
 	"""History item for agent actions"""
 
-	model_output: Union[DynamicOutput, BaseModel]
+	model_output: DynamicOutput | None
 	result: ActionResult
 	state: ControllerPageState
 

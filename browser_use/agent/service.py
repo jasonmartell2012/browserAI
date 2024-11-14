@@ -69,9 +69,12 @@ class AgentService:
 	def _setup_action_models(self) -> None:
 		"""Setup dynamic action and output models"""
 		custom_actions = Action.get_registered_actions()
-		self.DynamicActions = DynamicActions.get_or_create_model(custom_actions)
-		self.Output = DynamicOutput.get_or_create_model(self.DynamicActions)
-		self.output_model: Type[T] = cast(Type[T], self.Output)
+		self.DynamicActions = DynamicActions.combine_actions(custom_actions)
+		# self.Output = DynamicOutput(current_state=AgentState(), action=self.DynamicActions)
+		# self.output_model: Type[DynamicOutput] = cast(Type[DynamicOutput], self.Output)
+		self.OutputModel = DynamicOutput.type_with_custom_actions(
+			custom_actions=self.DynamicActions
+		)
 
 	def _initialize_messages(self) -> list[BaseMessage]:
 		"""Initialize message history with system and first message"""
@@ -160,7 +163,7 @@ class AgentService:
 
 	def _make_history_item(
 		self,
-		model_output: Optional[DynamicOutput],
+		model_output: DynamicOutput | None,
 		state: ControllerPageState,
 		result: ActionResult,
 	) -> None:
@@ -169,13 +172,13 @@ class AgentService:
 		self.action_history.append(history_item)
 
 	@time_execution_async('--get_next_action')
-	async def get_next_action(self, state: ControllerPageState) -> Any:
+	async def get_next_action(self, state: ControllerPageState) -> DynamicOutput:
 		"""Get next action from LLM based on current state"""
 		new_message = AgentMessagePrompt(state).get_user_message()
 		input_messages = self.messages + [new_message]
 
-		structured_llm = self.llm.with_structured_output(self.output_model)
-		response = await structured_llm.ainvoke(input_messages)
+		structured_llm = self.llm.with_structured_output(self.OutputModel)
+		response: DynamicOutput = await structured_llm.ainvoke(input_messages)  # type: ignore
 
 		self._update_message_history(state, response)
 		self._log_response(response)
