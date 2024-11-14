@@ -1,4 +1,5 @@
 import logging
+import os
 import sys
 
 
@@ -28,15 +29,16 @@ def setup_logging():
 
 	# Configure root logger
 	root_logger = logging.getLogger()
-	root_logger.setLevel(logging.WARNING)  # Default level for third-party logs
+	root_logger.setLevel(os.getenv('PYTEST_LOG_LEVEL', logging.INFO))
 	root_logger.addHandler(console_handler)
 
 	# Configure your application's logger
 	app_logger = logging.getLogger('browser_use')
-	app_logger.setLevel(logging.DEBUG)
-	app_logger.propagate = False  # Prevent duplicate logs
+	app_logger.setLevel(os.getenv('PYTEST_LOG_LEVEL', logging.INFO))
+	app_logger.propagate = False
 	app_logger.addHandler(console_handler)
 
-	# Suppress third-party logs
+	# Suppress third-party logs but respect pytest settings
+	third_party_level = logging.ERROR if not os.getenv('PYTEST_DEBUG') else logging.INFO
 	for logger_name in ['WDM', 'httpx', 'selenium', 'urllib3', 'asyncio']:
-		logging.getLogger(logger_name).setLevel(logging.ERROR)
+		logging.getLogger(logger_name).setLevel(third_party_level)

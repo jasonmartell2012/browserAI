@@ -17,7 +17,7 @@ class AgentSystemPrompt:
 		"""
 		return """{{
 			"current_state": {{
-				"valuation_previous_goal": "String starting with "Success" or "Failed:" evaluate if the previous goal was successful and if failed describe why",
+				"valuation_previous_goal": "String starting with "Success" or "Failed:" evaluate if the previous goal was successful and if failed describe why. If unknown, write 'Unknown'",
 				"memory": "String to store progress information for the overall task to rememeber until the end of the task",
 				"next_goal": "String describing the next immediate goal which can be achieved with one action"
 			}},
@@ -33,7 +33,7 @@ class AgentSystemPrompt:
 		Returns:
 		    str: Example response
 		"""
-		return """{"current_state": {"valuation_previous_goal": "Success", "memory": "We applied already for 3/7 jobs, 1. ..., 2. ..., 3. ...", "next_goal": "Click on the button x to apply for the next job"}, "action": {"click_element": {"index": 44,"num_clicks": 1}}}"""
+		return """{"current_state": {"valuation_previous_goal": "Success", "memory": "We applied already for 3/7 jobs, 1. ..., 2. ..., 3. ...", "next_goal": "Click on the button x to apply for the next job"}, "action": {"click_element": {"index": 44,"num_clicks": 2}}}"""
 
 	def important_rules(self) -> str:
 		"""
@@ -50,8 +50,7 @@ class AgentSystemPrompt:
 	5. If an image is provided, use it to understand the context
 	6. ALWAYS respond in the RESPONSE FORMAT with valid JSON:
 	7. If the page is empty use actions like "go_to_url", "search_google" or "open_tab"
-	8. If you need to click multiple times the same element use the num_clicks parameter with the number of clicks to be more efficient
-	9. Remember: Choose EXACTLY ONE action per response. Invalid combinations or multiple actions will be rejected.
+	8. Remember: Choose EXACTLY ONE action per response. Invalid combinations or multiple actions will be rejected.
 	"""
 
 	def input_format(self) -> str:

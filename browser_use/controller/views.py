@@ -62,7 +62,7 @@ class ControllerActions(BaseModel):
    {"nothing": true}
 - Go back:
    {"go_back": true}
-- Click an interactive element by its given index and specify how many times you want to click it if multiple clicks are possible (default is 1):
+- Click an interactive element by its given index. If you can be more efficient do it by clicking multiple times at once, use the num_clicks parameter (default is 1):
    {"click_element": {"index": 1, "num_clicks": 2}}
 - Input text into an interactive element by its index:
    {"input_text": {"index": 1, "text": "Your text"}}

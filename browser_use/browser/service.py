@@ -355,7 +355,7 @@ class BrowserService:
 
 		xpath = state.selector_map[index]
 		self._input_text_by_xpath(xpath, text)
-		logger.info(f'⌨️  Input text into element {index}: {xpath}')
+		logger.info(f'⌨️  Input text "{text}" into element {index}: {xpath}')
 
 	def _click_element_by_xpath(self, xpath: str):
 		"""

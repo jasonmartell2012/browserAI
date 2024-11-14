@@ -93,7 +93,7 @@ class AgentService:
 	async def step(self) -> None:
 		"""Execute one step of the task"""
 
-		logger.info(f'🔄 Step {self.n_steps}')
+		logger.info(f'\n📍 Step {self.n_steps}')
 		state = self.controller.get_current_state(screenshot=self.use_vision)
 
 		try:
@@ -192,10 +192,17 @@ class AgentService:
 
 	def _log_response(self, response: Any) -> None:
 		"""Log the model's response"""
-		logger.info(
-			f'💭 Thought: {response.current_state.model_dump_json(exclude_unset=True, indent=4)}'
-		)
-		logger.info(f'➡️  Action: {response.action.model_dump_json(exclude_unset=True)}')
+		if 'Success' in response.current_state.valuation_previous_goal:
+			emoji = '👍'
+		elif 'Failed' in response.current_state.valuation_previous_goal:
+			emoji = '⚠️'
+		else:
+			emoji = '🤷'
+
+		logger.info(f'{emoji} Evaluation: {response.current_state.valuation_previous_goal}')
+		logger.info(f'🧠 Memory: {response.current_state.memory}')
+		logger.info(f'🎯 Next Goal: {response.current_state.next_goal}')
+		logger.info(f'🛠️ Action: {response.action.model_dump_json(exclude_unset=True)}')
 
 	def _save_conversation(self, input_messages: list[BaseMessage], response: Any) -> None:
 		"""Save conversation history to file if path is specified"""
