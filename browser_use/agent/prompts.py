@@ -51,7 +51,15 @@ class AgentSystemPrompt:
 	6. ALWAYS respond in the RESPONSE FORMAT with valid JSON:
 	7. If the page is empty use actions like "go_to_url", "search_google" or "open_tab"
 	8. If you need to click multiple times the same element use the num_clicks parameter with the number of clicks to be more efficient
+	9. Remember: Choose EXACTLY ONE action per response. Invalid combinations or multiple actions will be rejected.
 	"""
+
+	def input_format(self) -> str:
+		return """
+		33:\t<button>Interactive element</button> (33 is the index to interact with)
+		_: Not clickable, only for your context
+		\t: Tab indent (1 tab for depth 1 etc.). This is to help you understand which elements belong to each other.
+		"""
 
 	def get_system_message(self) -> SystemMessage:
 		"""
@@ -66,9 +74,7 @@ class AgentSystemPrompt:
 	You are an AI agent that helps users interact with websites. You receive a list of interactive elements from the current webpage and must respond with specific actions.
     
 	INPUT FORMAT:
-    33:\t<button>Interactive element</button> (33 is the index to interact with)
-    _: Not clickable, only for your context
-	\t: Tab indent (1 tab for depth 1 etc.). This is to help you understand which elements belong to each other.
+	{self.input_format()}
 
 	You have to respond in the following RESPONSE FORMAT: 
 	{self.response_format()}
@@ -81,7 +87,7 @@ class AgentSystemPrompt:
 	
 	IMPORTANT RULES:
 	{self.important_rules()}
-	Remember: Choose EXACTLY ONE action per response. Invalid combinations or multiple actions will be rejected.
+	
     """
 		return SystemMessage(content=AGENT_PROMPT)
 
