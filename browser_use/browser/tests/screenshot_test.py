@@ -2,12 +2,12 @@ import base64
 
 import pytest
 
-from browser_use.browser.service import BrowserService
+from browser_use.browser.service import Browser
 
 
 @pytest.fixture
 def browser():
-	browser_service = BrowserService(headless=True)
+	browser_service = Browser(headless=True)
 	browser_service.init()
 	yield browser_service
 	browser_service.close()

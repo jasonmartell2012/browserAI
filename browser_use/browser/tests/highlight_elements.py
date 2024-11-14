@@ -2,13 +2,13 @@ import base64
 import os
 import time
 
-from browser_use.browser.service import BrowserService
+from browser_use.browser.service import Browser
 from browser_use.dom.service import DomService
 from browser_use.utils import time_execution_sync
 
 
 def test_highlight_elements():
-	browser = BrowserService(headless=False)
+	browser = Browser(headless=False)
 
 	driver = browser.init()
 

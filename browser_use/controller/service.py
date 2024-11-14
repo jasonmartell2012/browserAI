@@ -1,7 +1,7 @@
 import logging
 
 from browser_use.agent.views import ActionResult
-from browser_use.browser.service import BrowserService
+from browser_use.browser.service import Browser
 from browser_use.browser.views import BrowserState
 from browser_use.controller.views import (
 	ControllerActions,
@@ -26,7 +26,7 @@ class Controller:
 	"""
 
 	def __init__(self, keep_open: bool = False):
-		self.browser = BrowserService(keep_open=keep_open)
+		self.browser = Browser(keep_open=keep_open)
 		self.cached_state: BrowserState | None = None
 
 	def get_state(self, screenshot: bool = False) -> ControllerPageState:

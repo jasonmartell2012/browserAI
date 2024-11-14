@@ -29,7 +29,7 @@ from browser_use.utils import time_execution_sync
 logger = logging.getLogger(__name__)
 
 
-class BrowserService:
+class Browser:
 	def __init__(self, headless: bool = False, keep_open: bool = False):
 		self.headless = headless
 		self.driver: webdriver.Chrome | None = None
