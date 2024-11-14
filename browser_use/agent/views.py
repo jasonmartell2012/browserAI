@@ -181,7 +181,7 @@ class DynamicOutput(BaseModel):
 class AgentHistory(BaseModel):
 	"""History item for agent actions"""
 
-	model_output: BaseModel
+	model_output: Optional[DynamicOutput]
 	result: ActionResult
 	state: ControllerPageState
 
