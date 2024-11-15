@@ -117,7 +117,7 @@ class DomService:
 
 		return ProcessedDomContent(items=output_items, selector_map=selector_map)
 
-	def _cap_text_length(self, text: str, max_length: int = 150) -> str:
+	def _cap_text_length(self, text: str, max_length: int = 250) -> str:
 		if len(text) > max_length:
 			half_length = max_length // 2
 			return text[:half_length] + '...' + text[-half_length:]
@@ -253,11 +253,11 @@ class DomService:
 			if attr in element.attrs:
 				element_attr = element[attr]
 				if isinstance(element_attr, str):
-					element_attr = element_attr[:50]
+					element_attr = element_attr
 				elif isinstance(element_attr, (list, tuple)):
-					element_attr = ' '.join(str(v)[:50] for v in element_attr)
+					element_attr = ' '.join(str(v) for v in element_attr)
 
-				attrs.append(f'{attr}="{element_attr}"')
+				attrs.append(f'{attr}="{self._cap_text_length(element_attr, 25)}"')
 
 		state_attributes_prefixes = (
 			'aria-',
@@ -372,40 +372,3 @@ class DomService:
 			or element.get('hidden') is not None
 			or element.get('aria-disabled') == 'true'
 		)
-
-	# def _quick_element_filter(self, element: PageElement) -> bool:
-	# 	"""
-	# 	Quick pre-filter to eliminate elements before expensive checks.
-	# 	Returns True if element passes initial filtering.
-	# 	"""
-	# 	if isinstance(element, NavigableString):
-	# 		# Quick check for empty or whitespace-only strings
-	# 		return bool(element.strip())
-
-	# 	if not isinstance(element, Tag):
-	# 		return False
-
-	# 	style = element.get('style')
-
-	# 	# Quick attribute checks that would make element invisible/non-interactive
-	# 	if any(
-	# 		[
-	# 			element.get('aria-hidden') == 'true',
-	# 			element.get('hidden') is not None,
-	# 			element.get('disabled') is not None,
-	# 			style and ('display: none' in style or 'visibility: hidden' in style),
-	# 			element.has_attr('class')
-	# 			and any(cls in element['class'] for cls in ['hidden', 'invisible']),
-	# 			# Common hidden class patterns
-	# 			element.get('type') == 'hidden',
-	# 		]
-	# 	):
-	# 		return False
-
-	# 	# Skip elements that definitely won't be interactive or visible
-	# 	non_interactive_display = ['none', 'hidden']
-	# 	computed_style = element.get('style', '') or ''
-	# 	if any(display in computed_style for display in non_interactive_display):
-	# 		return False
-
-	# 	return True

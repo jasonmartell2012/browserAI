@@ -366,7 +366,7 @@ class BrowserService:
 					EC.element_to_be_clickable((By.XPATH, xpath)),
 					message=f'Element not clickable: {xpath}',
 				)
-				driver.execute_script('arguments[0].click();', element)
+				element.click()
 				self.wait_for_page_load()
 				return
 			except Exception:
