@@ -13,7 +13,6 @@ from langchain_openai import ChatOpenAI
 from browser_use.agent.service import Agent
 from browser_use.controller.service import Controller
 from browser_use.utils import logger
-from browser_use.validator.service import ValidationService
 
 # Constants
 MAX_STEPS = 50
@@ -42,16 +41,13 @@ def llm():
 
 @pytest.fixture(scope='function')
 async def controller():
-	"""Initialize and cleanup the controller for each test"""
+	"""Initialize the controller"""
 	controller = Controller()
-	yield controller
-	controller.browser.close()
-
-
-@pytest.fixture(scope='session')
-def validator(llm):
-	"""Initialize the validation service"""
-	return ValidationService(llm)
+	try:
+		yield controller
+	finally:
+		if controller.browser:
+			controller.browser.close(force=True)
 
 
 # run with: pytest -s -v tests/test_mind2web.py:test_random_samples

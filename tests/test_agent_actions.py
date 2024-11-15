@@ -1,6 +1,7 @@
 import asyncio
 
 import pytest
+from langchain_anthropic import ChatAnthropic
 from langchain_openai import ChatOpenAI
 from pydantic import BaseModel
 
@@ -11,7 +12,10 @@ from browser_use.controller.service import Controller
 @pytest.fixture
 def llm():
 	"""Initialize language model for testing"""
+
+	# return ChatAnthropic(model_name='claude-3-5-sonnet-20240620', timeout=25, stop=None)
 	return ChatOpenAI(model='gpt-4o')
+	# return ChatOpenAI(model='gpt-4o-mini')
 
 
 @pytest.fixture

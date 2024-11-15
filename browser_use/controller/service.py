@@ -78,6 +78,8 @@ class Controller:
 			if len(driver.window_handles) > initial_handles:
 				browser.handle_new_tab()
 
+			return ActionResult(extracted_content=f'Clicked element {msg}')
+
 		@self.registry.action('Input text', param_model=InputTextAction, requires_browser=True)
 		def input_text(params: InputTextAction, browser: Browser):
 			state = browser._cached_state
@@ -86,7 +88,8 @@ class Controller:
 
 			xpath = state.selector_map[params.index]
 			browser._input_text_by_xpath(xpath, params.text)
-			logger.info(f'⌨️  Input text "{params.text}" into element {params.index}: {xpath}')
+			msg = f'⌨️  Input text "{params.text}" into element {params.index}: {xpath}'
+			return ActionResult(extracted_content=msg)
 
 		# Tab Management Actions
 		@self.registry.action('Switch tab', param_model=SwitchTabAction, requires_browser=True)
@@ -152,4 +155,4 @@ class Controller:
 						raise ValueError(f'Invalid action result type: {type(result)} of {result}')
 			return ActionResult()
 		except Exception as e:
-			return ActionResult(error=str(object=e))
+			raise e

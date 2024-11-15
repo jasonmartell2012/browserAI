@@ -107,20 +107,20 @@ class Agent:
 		try:
 			model_output = await self.get_next_action(state)
 			result = self.controller.act(model_output.action)
-			# Success
+			if result.extracted_content:
+				logger.info(f'📄 Result: {result.extracted_content}')
 			self.consecutive_failures = 0
 
 		except Exception as e:
 			result = self._handle_step_error(e, state)
 			model_output = None
-
 		self._update_messages_with_result(result)
 		self._make_history_item(model_output, state, result)
 
 	def _handle_step_error(self, error: Exception, state: BrowserState) -> ActionResult:
 		"""Handle all types of errors that can occur during a step"""
 		error_msg = AgentError.format_error(error)
-		prefix = f'Failed {self.consecutive_failures + 1}/{self.max_failures} times:\n '
+		prefix = f'❌ Result failed {self.consecutive_failures + 1}/{self.max_failures} times:\n '
 
 		if isinstance(error, (ValidationError, ValueError)):
 			logger.error(f'{prefix}{error_msg}')
@@ -285,12 +285,12 @@ class Agent:
 		"""Log the usage metadata"""
 		total_cost = self._calc_token_cost()
 		total_tokens = self.usage_metadata.total_tokens
-		logger.info(
+		logger.debug(
 			f'🔢 Total Tokens: input: {self.usage_metadata.input_tokens} (cached: {self.usage_metadata.input_token_details.cache_read}) + output: {self.usage_metadata.output_tokens} = {total_tokens} = ${total_cost:.4f} 💰'
 		)
 
 		if current_tokens:
-			logger.info(
+			logger.debug(
 				f'🔢 Last  Tokens: input: {current_tokens.input_tokens} (cached: {current_tokens.input_token_details.cache_read}) + output: {current_tokens.output_tokens} = {current_tokens.total_tokens} '
 			)
 

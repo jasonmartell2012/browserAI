@@ -173,8 +173,8 @@ class Browser:
 
 		return self.current_state
 
-	def close(self):
-		if not self.keep_open:
+	def close(self, force: bool = False):
+		if not self.keep_open or force:
 			driver = self._get_driver()
 			driver.quit()
 			self.driver = None
