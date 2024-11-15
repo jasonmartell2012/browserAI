@@ -1,11 +1,13 @@
 import logging
 
 from bs4 import BeautifulSoup, NavigableString, PageElement, Tag
+from selenium.webdriver.remote.webelement import WebElement
 from selenium import webdriver
 from selenium.webdriver.common.by import By
 
 from browser_use.dom.views import DomContentItem, ProcessedDomContent
 from browser_use.utils import time_execution_sync
+
 
 logger = logging.getLogger(__name__)
 logging.basicConfig(level=logging.INFO)
@@ -37,100 +39,81 @@ class DomService:
 		# Parse HTML content using BeautifulSoup with html.parser
 		soup = BeautifulSoup(html_content, 'html.parser')
 
-		candidate_elements: list[Tag | NavigableString] = []
-		dom_queue = [element for element in reversed(list(soup.body.children))] if soup.body else []
-		# dom_queue = [element for element in soup.body.children] if soup.body else []
-		# xpath_cache = {}
+		output_items: list[DomContentItem] = []
+		selector_map: dict[int, str] = {}
+		current_index = 0
 
-		# Find candidate elements
+		dom_queue = (
+			[(element, [], None) for element in reversed(list(soup.body.children))]
+			if soup.body
+			else []
+		)
+
 		while dom_queue:
-			element = dom_queue.pop()
-			should_add_element = False
+			element, path_indices, current_xpath = dom_queue.pop()
 
-			# Add quick filter before expensive checks
-			# if not self._quick_element_filter(element):
-			# 	if isinstance(element, Tag):
-			# 		element.decompose()
-			# 	continue
-
-			# Handle both Tag elements and text nodes
 			if isinstance(element, Tag):
 				if not self._is_element_accepted(element):
-					# Skip element if it's not accepted
-					element.decompose()  # get rid of some memory leaks potentially
+					element.decompose()
 					continue
 
-				for child in reversed(list(element.children)):
-					# for child in element.children:
-					dom_queue.append(child)
+				# Generate simple xpath using tag name and sibling index
+				siblings = (
+					list(element.parent.find_all(element.name, recursive=False))
+					if element.parent
+					else []
+				)
+				sibling_index = siblings.index(element) + 1 if siblings else 1
+				current_path = path_indices + [(element.name, sibling_index)]
 
-				# Check if element is interactive or leaf element
+				# Generate xpath string for current element
+				element_xpath = '//' + '/'.join(f'{tag}[{idx}]' for tag, idx in current_path)
+
+				# Add children to queue with their path information
+				for child in reversed(list(element.children)):
+					dom_queue.append((child, current_path, None))
+
+				# Process interactive or leaf elements
 				if self._is_interactive_element(element) or self._is_leaf_element(element):
 					if (
 						self._is_active(element)
-						and self._is_top_element(element)
-						and self._is_visible(element)
+						and self._is_top_element(element, xpath=element_xpath)
+						and self._is_visible(element, xpath=element_xpath)
 					):
-						should_add_element = True
+						text_content = self._extract_text_from_all_children(element)
+						tag_name = element.name
+
+						attributes = self._get_essential_attributes(element)
+
+						output_string = f"<{tag_name}{' ' + attributes if attributes else ''}>{text_content}</{tag_name}>"
+
+						depth = len(current_path)
+
+						output_items.append(
+							DomContentItem(
+								index=current_index, text=output_string, clickable=True, depth=depth
+							)
+						)
+
+						selector_map[current_index] = element_xpath
+
+						current_index += 1
 
 			elif isinstance(element, NavigableString) and element.strip():
-				if self._is_visible(element):
-					should_add_element = True
+				if self._is_visible(element, xpath=current_xpath):
+					# Skip text nodes that are direct children of already processed elements
+					if element.parent in [e[0] for e in dom_queue]:
+						continue
 
-			if should_add_element:
-				if not isinstance(element, (Tag, NavigableString)):
-					continue
-				candidate_elements.append(element)
-
-		# Process candidates
-		selector_map: dict[int, str] = {}
-		output_items: list[DomContentItem] = []
-
-		for index, element in enumerate(candidate_elements):
-			xpath = self._generate_xpath(element)
-
-			depth = max(len(xpath.split('/')) - 2, 0)
-
-			# Skip text nodes that are direct children of already processed elements
-			if isinstance(element, NavigableString) and element.parent in [
-				e for e in candidate_elements
-			]:
-				continue
-
-			if isinstance(element, NavigableString):
-				text_content = self._cap_text_length(element.strip())
-				if text_content:
-					output_string = f'{text_content}'
-					output_items.append(
-						DomContentItem(
-							index=index, text=output_string, clickable=False, depth=depth
+					text_content = self._cap_text_length(element.strip())
+					if text_content:
+						depth = len(path_indices)
+						output_items.append(
+							DomContentItem(
+								index=current_index, text=text_content, clickable=False, depth=depth
+							)
 						)
-					)
-					continue
-				else:
-					# don't add empty text nodes
-					continue
-
-			else:
-				text_content = self._extract_text_from_all_children(element)
-
-				tag_name = element.name
-				attributes = self._get_essential_attributes(element)
-
-				opening_tag = f"<{tag_name}{' ' + attributes if attributes else ''}>"
-				closing_tag = f'</{tag_name}>'
-
-				output_string = f'{opening_tag}{text_content}{closing_tag}'
-				output_items.append(
-					DomContentItem(index=index, text=output_string, clickable=True, depth=depth)
-				)
-
-			selector_map[index] = xpath
-
-		# Remove all elements from selector map that are not in output items
-		selector_map = {
-			k: v for k, v in selector_map.items() if k in [i.index for i in output_items]
-		}
+						current_index += 1
 
 		return ProcessedDomContent(items=output_items, selector_map=selector_map)
 
@@ -236,75 +219,6 @@ class DomService:
 
 		return element.name not in leaf_element_deny_list
 
-	def _generate_xpath(self, element: Tag | NavigableString) -> str:
-		# Generate cache key based on element properties
-		cache_key = None
-		if isinstance(element, Tag):
-			attributes = [
-				element.get('id', ''),
-				element.get('class', ''),
-				element.name,
-				element.get_text().strip(),
-			]
-			cache_key = '|'.join(str(attr) for attr in attributes)
-
-			# Return cached xpath if exists
-			if cache_key in self.xpath_cache:
-				return self.xpath_cache[cache_key]
-
-		if isinstance(element, NavigableString):
-			if element.parent:
-				return self._generate_xpath(element.parent)
-			return ''
-
-		if not hasattr(element, 'name'):
-			return ''
-
-		element_id = getattr(element, 'get', lambda x: None)('id')
-		if element_id:
-			xpath = f"//*[@id='{element_id}']"
-			if cache_key:
-				self.xpath_cache[cache_key] = xpath
-			return xpath
-
-		parts = []
-		current = element
-
-		while current and getattr(current, 'name', None):
-			if current.name == '[document]':
-				break
-
-			parent = getattr(current, 'parent', None)
-			if parent and hasattr(parent, 'children'):
-				# Get only visible element nodes
-				siblings = [
-					s for s in parent.find_all(current.name, recursive=False) if isinstance(s, Tag)
-				]
-
-				if len(siblings) > 1:
-					try:
-						index = siblings.index(current) + 1
-						parts.insert(0, f'{current.name}[{index}]')
-					except ValueError:
-						parts.insert(0, current.name)
-				else:
-					parts.insert(0, current.name)
-
-			current = parent
-
-		if parts and parts[0] != 'html':
-			parts.insert(0, 'html')
-		if len(parts) > 1 and parts[1] != 'body':
-			parts.insert(1, 'body')
-
-		xpath = '//' + '/'.join(parts)
-
-		# Cache the generated xpath
-		if cache_key:
-			self.xpath_cache[cache_key] = xpath
-
-		return xpath
-
 	def _get_essential_attributes(self, element: Tag) -> str:
 		"""
 		Collects essential attributes from an element.
@@ -357,26 +271,20 @@ class DomService:
 
 		return ' '.join(attrs)
 
-	def _is_visible(self, element: Tag | NavigableString) -> bool:
+	def _is_visible(self, element: Tag | NavigableString, xpath: str | None = None) -> bool:
 		if not isinstance(element, Tag):
-			return self._is_text_visible(element)
+			return self._is_text_visible(element, xpath)
 
 		element_id = element.get('id', '')
 		if element_id:
 			js_selector = f'document.getElementById("{element_id}")'
 		else:
-			xpath = self._generate_xpath(element)
 			js_selector = f'document.evaluate("{xpath}", document, null, XPathResult.FIRST_ORDERED_NODE_TYPE, null).singleNodeValue'
 
 		visibility_check = f"""
 			return (function() {{
 				const element = {js_selector};
-				
-				if (!element) {{
-					return false;
-				}}
-
-				// Force return as boolean
+				if (!element) {{ return false; }}
 				return Boolean(element.checkVisibility({{
 					checkOpacity: true,
 					checkVisibilityCSS: true
@@ -385,26 +293,21 @@ class DomService:
 		"""
 
 		try:
-			# todo: parse responses with pydantic
 			is_visible = self.driver.execute_script(visibility_check)
 			return bool(is_visible)
 		except Exception:
 			return False
 
-	def _is_text_visible(self, element: NavigableString) -> bool:
+	def _is_text_visible(self, element: NavigableString, parent_xpath: str | None = None) -> bool:
 		"""Check if text node is visible using JavaScript."""
 		parent = element.parent
 		if not parent:
 			return False
 
-		xpath = self._generate_xpath(parent)
 		visibility_check = f"""
 			return (function() {{
-				const parent = document.evaluate("{xpath}", document, null, XPathResult.FIRST_ORDERED_NODE_TYPE, null).singleNodeValue;
-				
-				if (!parent) {{
-					return false;
-				}}
+				const parent = document.evaluate("{parent_xpath}", document, null, XPathResult.FIRST_ORDERED_NODE_TYPE, null).singleNodeValue;
+				if (!parent) {{ return false; }}
 				
 				const range = document.createRange();
 				const textNode = parent.childNodes[{list(parent.children).index(element)}];
@@ -416,7 +319,6 @@ class DomService:
 					return false;
 				}}
 				
-				// Force return as boolean
 				return Boolean(parent.checkVisibility({{
 					checkOpacity: true,
 					checkVisibilityCSS: true
@@ -429,15 +331,12 @@ class DomService:
 		except Exception:
 			return False
 
-	def _is_top_element(self, element: Tag | NavigableString, rect=None) -> bool:
+	def _is_top_element(self, element: Tag | NavigableString, xpath: str) -> bool:
 		"""Check if element is the topmost at its position."""
-		xpath = self._generate_xpath(element)
 		check_top = f"""
 			return (function() {{
 				const elem = document.evaluate("{xpath}", document, null, XPathResult.FIRST_ORDERED_NODE_TYPE, null).singleNodeValue;
-				if (!elem) {{
-					return false;
-				}}
+				if (!elem) {{ return false; }}
 				
 				const rect = elem.getBoundingClientRect();
 				const points = [
