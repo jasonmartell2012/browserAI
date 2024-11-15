@@ -415,6 +415,8 @@ class Browser:
 
 		return tabs_info
 
+	# endregion
+
 	@time_execution_sync('--get_state')
 	def get_state(self, use_vision: bool = False) -> BrowserState:
 		"""

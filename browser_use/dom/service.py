@@ -91,8 +91,8 @@ class DomService:
 
 		# Create ordered results
 		ordered_results: list[
-			tuple[int, str, bool, str, int]
-		] = []  # [(order, xpath, is_clickable, content, depth), ...]
+			tuple[int, str, bool, str, int, bool]
+		] = []  # [(order, xpath, is_clickable, content, depth, is_text_only), ...]
 
 		# Process interactive elements
 		for xpath, (element, order) in interactive_elements.items():
@@ -105,7 +105,7 @@ class DomService:
 					output_string = f"<{tag_name}{' ' + attributes if attributes else ''}>{text_content}</{tag_name}>"
 
 					depth = len(xpath.split('/')) - 2
-					ordered_results.append((order, xpath, True, output_string, depth))
+					ordered_results.append((order, xpath, True, output_string, depth, False))
 
 		# Process text nodes
 		for xpath, (text_node, order) in text_nodes.items():
@@ -115,22 +115,25 @@ class DomService:
 					text_content = self._cap_text_length(text_node.strip())
 					if text_content:
 						depth = len(xpath.split('/')) - 2
-						ordered_results.append((order, xpath, False, text_content, depth))
+						ordered_results.append((order, xpath, False, text_content, depth, True))
 
 		# Sort by original order
 		ordered_results.sort(key=lambda x: x[0])
 
 		# Build final output maintaining order
-		for i, (_, xpath, is_clickable, content, depth) in enumerate(ordered_results):
+		for i, (_, xpath, is_clickable, content, depth, is_text_only) in enumerate(ordered_results):
 			output_items.append(
 				DomContentItem(
 					index=i,
 					text=content,
-					clickable=is_clickable,
+					# clickable=is_clickable,
 					depth=depth,
+					is_text_only=is_text_only,
 				)
 			)
-			if is_clickable:  # Only add clickable elements to selector map
+			# if is_clickable:  # Only add clickable elements to selector map
+			# TODO: make this right, for now we add all elements (except text) to selector map
+			if not is_text_only:
 				selector_map[i] = xpath
 
 		return ProcessedDomContent(items=output_items, selector_map=selector_map)

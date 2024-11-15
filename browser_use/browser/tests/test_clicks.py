@@ -1,20 +1,13 @@
 import time
+from browser_use.browser.service import Browser
 
-from browser_use.browser.service import BrowserService
-from browser_use.controller.service import ControllerService
-from browser_use.controller.views import (
-	ClickElementControllerAction,
-	ControllerActions,
-	GoToUrlControllerAction,
-)
-from browser_use.dom.service import DomService
 from browser_use.utils import time_execution_sync
 
 
 def test_highlight_elements():
-	controller = ControllerService()
+	browser = Browser()
 
-	controller.act(ControllerActions(go_to_url=GoToUrlControllerAction(url='https://www.kayak.ch')))
+	browser._get_driver().get('https://kayak.com')
 	# browser.go_to_url('https://google.com/flights')
 	# browser.go_to_url('https://immobilienscout24.de')
 
@@ -25,10 +18,10 @@ def test_highlight_elements():
 	# browser._click_element_by_xpath("//button[div/div[text()='Alle akzeptieren']]")
 
 	while True:
-		state = controller.get_current_state()
+		state = browser.get_state()
 
 		time_execution_sync('highlight_selector_map_elements')(
-			controller.browser.highlight_selector_map_elements
+			browser.highlight_selector_map_elements
 		)(state.selector_map)
 
 		print(state.dom_items_to_string(use_tabs=False))
@@ -48,13 +41,14 @@ def test_highlight_elements():
 				print(f'XPath: {xpath}')
 				print(f'Count: {count}\n')
 
+		print(state.selector_map.keys(), 'Selector map keys')
 		action = input('Select next action: ')
 
-		time_execution_sync('remove_highlight_elements')(controller.browser.remove_highlights)()
+		time_execution_sync('remove_highlight_elements')(browser.remove_highlights)()
 
-		next_action = ControllerActions(click_element=ClickElementControllerAction(id=int(action)))
+		xpath = state.selector_map[int(action)]
 
-		controller.act(next_action)
+		browser._click_element_by_xpath(xpath)
 
 
 def main():

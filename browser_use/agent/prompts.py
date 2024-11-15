@@ -1,12 +1,14 @@
+from datetime import datetime
 from langchain_core.messages import HumanMessage, SystemMessage
 
 from browser_use.browser.views import BrowserState
 
 
 class AgentSystemPrompt:
-	def __init__(self, task: str, action_description: str):
+	def __init__(self, task: str, action_description: str, current_date: datetime):
 		self.task = task
 		self.default_action_description = action_description
+		self.current_date = current_date
 
 	def response_format(self) -> str:
 		"""
@@ -56,8 +58,13 @@ class AgentSystemPrompt:
 
 	def input_format(self) -> str:
 		return """
-33:\t<button>Interactive element</button> (33 is the index to interact with)
-_: Not clickable, only for your context
+Example:
+33[:]\t<button>Interactive element</button>
+_[:] Text content...
+
+Explanation:
+index[:] Interactible element by index. You can only interact with all elements which are clickable and refer to them by their index. DO NOT click on elements without index and do not make up an index or there will be an error.
+_[:] elements are just to give you more context, but not interactable.
 \t: Tab indent (1 tab for depth 1 etc.). This is to help you understand which elements belong to each other.
 """
 
@@ -68,10 +75,10 @@ _: Not clickable, only for your context
 		Returns:
 		    str: Formatted system prompt
 		"""
+		time_str = self.current_date.strftime('%Y-%m-%d %H:%M')
 
 		AGENT_PROMPT = f"""
-    
-You are an AI agent that helps users interact with websites. You receive a list of interactive elements from the current webpage and must respond with specific actions.
+You are an AI agent that helps users interact with websites. You receive a list of interactive elements from the current webpage and must respond with specific actions. Today's date is {time_str}.
 
 INPUT FORMAT:
 {self.input_format()}

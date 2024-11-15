@@ -49,6 +49,7 @@ agent = Agent(
 	task=args.query,
 	llm=llm,
 	controller=Controller(keep_open=True),
+	save_conversation_path='./tmp/try_flight/',
 )
 
 

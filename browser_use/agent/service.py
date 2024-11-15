@@ -4,6 +4,7 @@ import json
 import logging
 import os
 import time
+from datetime import datetime
 from typing import Any, Optional, TypeVar
 
 from dotenv import load_dotenv
@@ -92,7 +93,7 @@ class Agent:
 		action_descriptions = self.controller.registry.get_prompt_description()
 
 		system_prompt = AgentSystemPrompt(
-			self.task, action_description=action_descriptions
+			self.task, action_description=action_descriptions, current_date=datetime.now()
 		).get_system_message()
 
 		first_message = HumanMessage(content=f'Your task is: {self.task}')
