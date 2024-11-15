@@ -29,7 +29,6 @@
                 "-k",
                 "test_captcha_solver",
                 "--capture=no",
-                "--log-cli-level=INFO"
             ],
             "console": "integratedTerminal",
             "justMyCode": false
@@ -45,7 +44,6 @@
                 "-k",
                 "test_ecommerce_interaction",
                 "--capture=no",
-                "--log-cli-level=INFO"
             ],
             "console": "integratedTerminal",
             "justMyCode": false
