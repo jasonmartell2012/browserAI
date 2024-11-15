@@ -1,3 +1,4 @@
+from typing import Dict, List
 from pydantic import BaseModel
 
 
@@ -34,3 +35,19 @@ class ElementState(BaseModel):
 
 class TextState(BaseModel):
 	isVisible: bool
+
+
+class ElementCheckResult(BaseModel):
+	xpath: str
+	isVisible: bool
+	isTopElement: bool
+
+
+class TextCheckResult(BaseModel):
+	xpath: str
+	isVisible: bool
+
+
+class BatchCheckResults(BaseModel):
+	elements: Dict[str, ElementCheckResult]
+	texts: Dict[str, TextCheckResult]
