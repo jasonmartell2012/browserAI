@@ -25,14 +25,6 @@ async def controller():
 			controller.browser.close(force=True)
 
 
-async def collect_statistics(history):
-	"""Collect statistics from the agent's history"""
-	total_steps = len(history)
-	total_tokens = sum([h.token_usage.total_tokens for h in history if hasattr(h, 'token_usage')])
-	total_cost = sum([h.token_usage.total_cost for h in history if hasattr(h, 'token_usage')])
-	return total_steps, total_tokens, total_cost
-
-
 @pytest.mark.asyncio
 async def test_refresh_page_100_times(llm, controller):
 	"""Stress test: Refresh the page 100 times"""
@@ -46,12 +38,8 @@ async def test_refresh_page_100_times(llm, controller):
 	end_time = time.time()
 
 	total_time = end_time - start_time
-	total_steps, total_tokens, total_cost = await collect_statistics(history)
 
 	print(f'Total time: {total_time:.2f} seconds')
-	print(f'Total steps: {total_steps}')
-	print(f'Total tokens used: {total_tokens}')
-	print(f'Estimated cost: ${total_cost:.4f}')
 	# Check for rate limit errors in history
 	errors = [h.result.error for h in history if h.result and h.result.error]
 	rate_limit_errors = [e for e in errors if 'rate limit' in e.lower()]
@@ -71,12 +59,10 @@ async def test_open_10_tabs_and_extract_content(llm, controller):
 	end_time = time.time()
 
 	total_time = end_time - start_time
-	total_steps, total_tokens, total_cost = await collect_statistics(history)
 
 	print(f'Total time: {total_time:.2f} seconds')
-	print(f'Total steps: {total_steps}')
-	print(f'Total tokens used: {total_tokens}')
-	print(f'Estimated cost: ${total_cost:.4f}')
 	# Check for errors
 	errors = [h.result.error for h in history if h.result and h.result.error]
 	assert len(errors) == 0, 'Errors occurred during the test'
+	# check if 10 tabs were opened
+	assert len(controller.browser.current_state.tabs) >= 10, '10 tabs were not opened'

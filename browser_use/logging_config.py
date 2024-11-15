@@ -3,6 +3,10 @@ import sys
 
 
 def setup_logging():
+	# Check if handlers are already set up
+	if logging.getLogger().hasHandlers():
+		return
+
 	# Clear existing handlers
 	root = logging.getLogger()
 	root.handlers = []

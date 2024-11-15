@@ -101,7 +101,7 @@ class Agent:
 	@time_execution_async('--step')
 	async def step(self) -> None:
 		"""Execute one step of the task"""
-		logger.info(f'\n📍 Step {self.n_steps}')
+		logger.info(f'📍 Step {self.n_steps}')
 		state = self.controller.browser.get_state(use_vision=self.use_vision)
 
 		try:
