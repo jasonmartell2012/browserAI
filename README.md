@@ -115,11 +115,11 @@ controller = Controller()
 # Initialize browser agent
 agent1 = Agent(
     task="Open 3 VCs websites in the New York area.",
-    llm=ChatAnthropic(model="claude-3-5-sonnet-20240620", timeout=25, stop=None),
+    llm=ChatAnthropic(model_name="claude-3-5-sonnet-20240620", timeout=25, stop=None),
     controller=controller)
 agent2 = Agent(
     task="Give me the names of the founders of the companies in all tabs.",
-    llm=ChatAnthropic(model="claude-3-5-sonnet-20240620", timeout=25, stop=None),
+    llm=ChatAnthropic(model_name="claude-3-5-sonnet-20240620", timeout=25, stop=None),
     controller=controller)
 
 run(agent1.run())

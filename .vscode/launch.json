@@ -33,6 +33,22 @@
             ],
             "console": "integratedTerminal",
             "justMyCode": false
+        },
+        {
+            "name": "Python: Debug Ecommerce Interaction",
+            "type": "python",
+            "request": "launch",
+            "module": "pytest",
+            "args": [
+                "tests/test_agent_actions.py",
+                "-v",
+                "-k",
+                "test_ecommerce_interaction",
+                "--capture=no",
+                "--log-cli-level=INFO"
+            ],
+            "console": "integratedTerminal",
+            "justMyCode": false
         }
     ]
 }
