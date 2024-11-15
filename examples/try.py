@@ -54,9 +54,7 @@ agent = Agent(
 
 
 async def main():
-	result, history = await agent.run()
-	print(result)
-	print(history)
+	await agent.run()
 
 
 asyncio.run(main())
