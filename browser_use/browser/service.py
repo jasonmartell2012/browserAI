@@ -175,9 +175,10 @@ class Browser:
 
 	def close(self, force: bool = False):
 		if not self.keep_open or force:
-			driver = self._get_driver()
-			driver.quit()
-			self.driver = None
+			if self.driver:
+				driver = self._get_driver()
+				driver.quit()
+				self.driver = None
 		else:
 			input('Press Enter to close Browser...')
 			self.keep_open = False
