@@ -70,7 +70,6 @@ class Controller:
 					msg = f'🖱️  Clicked element {params.index}: {xpath}'
 					if params.num_clicks > 1:
 						msg += f' ({_ + 1}/{params.num_clicks} clicks)'
-					logger.info(msg)
 				except Exception as e:
 					logger.warning(f'Element no longer available after {_ + 1} clicks: {str(e)}')
 					break
