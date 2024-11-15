@@ -60,7 +60,7 @@ class Controller:
 
 			if params.index not in state.selector_map:
 				print(state.selector_map)
-				raise Exception(f'Element index {params.index} not found in selector map')
+				raise Exception(f'Element with index {params.index} does not exist - retry')
 
 			xpath = state.selector_map[params.index]
 			driver = browser._get_driver()

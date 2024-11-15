@@ -1,4 +1,5 @@
 from datetime import datetime
+
 from langchain_core.messages import HumanMessage, SystemMessage
 
 from browser_use.browser.views import BrowserState
@@ -63,7 +64,7 @@ Example:
 _[:] Text content...
 
 Explanation:
-index[:] Interactible element by index. You can only interact with all elements which are clickable and refer to them by their index. DO NOT click on elements without index and do not make up an index or there will be an error.
+index[:] Interactible element with index. You can only interact with all elements which are clickable and refer to them by their index. DO NOT click on elements without index and do not make up an index or there will be an error.
 _[:] elements are just to give you more context, but not interactable.
 \t: Tab indent (1 tab for depth 1 etc.). This is to help you understand which elements belong to each other.
 """
