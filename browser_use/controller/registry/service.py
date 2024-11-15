@@ -25,10 +25,11 @@ class Registry:
 			for name, param in sig.parameters.items()
 			if name != 'browser'
 		}
+		# TODO: make the types here work
 		return create_model(
 			f'{function.__name__}Params',
 			__base__=ActionModel,
-			**params,
+			**params,  # type: ignore
 		)
 
 	def action(
@@ -96,7 +97,7 @@ class Registry:
 			name: (Optional[action.param_model], None)
 			for name, action in self.registry.actions.items()
 		}
-		return create_model('ActionModel', __base__=ActionModel, **fields)
+		return create_model('ActionModel', __base__=ActionModel, **fields)  # type:ignore
 
 	def get_prompt_description(self) -> str:
 		"""Get a description of all actions for the prompt"""

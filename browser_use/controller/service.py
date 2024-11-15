@@ -68,6 +68,8 @@ class Controller:
 			driver = browser._get_driver()
 			initial_handles = len(driver.window_handles)
 
+			msg = None
+
 			for _ in range(params.num_clicks):
 				try:
 					browser._click_element_by_xpath(xpath)
@@ -129,8 +131,10 @@ class Controller:
 		)
 		def extract_content(params: ExtractPageContentAction, browser: Browser):
 			driver = browser._get_driver()
-			content = MainContentExtractor.extract(
-				html=driver.page_source, output_format=params.value
+
+			content = MainContentExtractor.extract(  # type: ignore
+				html=driver.page_source,
+				output_format=params.value,
 			)
 			return ActionResult(extracted_content=content)
 

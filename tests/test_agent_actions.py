@@ -91,7 +91,7 @@ async def test_error_recovery(llm, agent_with_controller):
 			if h.model_output
 			and getattr(h.model_output, 'action', None)
 			and getattr(h.model_output.action, 'go_to_url', None)
-			and getattr(h.model_output.action.go_to_url, 'url', '').endswith('google.com')
+			and getattr(h.model_output.action.go_to_url, 'url', '').endswith('google.com')  # type: ignore -> pretty weird way to do this
 		),
 		None,
 	)

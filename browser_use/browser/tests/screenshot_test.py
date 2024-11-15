@@ -8,7 +8,6 @@ from browser_use.browser.service import Browser
 @pytest.fixture
 def browser():
 	browser_service = Browser(headless=True)
-	browser_service.init()
 	yield browser_service
 	browser_service.close()
 
@@ -34,4 +33,4 @@ def test_take_full_page_screenshot(browser):
 
 
 if __name__ == '__main__':
-	test_take_full_page_screenshot(BrowserService(headless=False))
+	test_take_full_page_screenshot(Browser(headless=False))
