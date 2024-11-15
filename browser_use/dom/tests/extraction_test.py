@@ -17,8 +17,9 @@ def test_process_html_file():
 
 	driver.get('https://kayak.com/flights')
 	# browser.go_to_url('https://google.com/flights')
+	# browser.go_to_url('https://immobilienscout24.de')
 
-	time.sleep(2)
+	time.sleep(3)
 	# browser._click_element_by_xpath(
 	# 	'/html/body/div[5]/div/div[2]/div/div/div[3]/div/div[1]/button[1]'
 	# )

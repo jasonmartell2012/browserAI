@@ -13,7 +13,7 @@ def browser():
 	browser_service.close()
 
 
-@pytest.mark.skip(reason='takes too long')
+# @pytest.mark.skip(reason='takes too long')
 def test_take_full_page_screenshot(browser):
 	# Go to a test page
 	browser.go_to_url('https://example.com')
