@@ -144,7 +144,10 @@ class Controller:
 			return ActionResult(is_done=True, extracted_content=params.text)
 
 	def action(self, description: str, **kwargs):
-		"""Decorator for registering custom actions"""
+		"""Decorator for registering custom actions
+
+		@param description: Describe the LLM what the function does (better description == better function calling)
+		"""
 		return self.registry.action(description, **kwargs)
 
 	@time_execution_sync('--act')
