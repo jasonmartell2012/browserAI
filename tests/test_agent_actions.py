@@ -23,8 +23,11 @@ async def agent_with_controller():
 	"""Create agent with controller for testing"""
 	controller = Controller(keep_open=False)
 	print('init controller')
-	yield controller
-	controller.browser.close()
+	try:
+		yield controller
+	finally:
+		if controller.browser:
+			controller.browser.close(force=True)
 
 
 @pytest.mark.asyncio
