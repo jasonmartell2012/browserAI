@@ -60,7 +60,9 @@ class Controller:
 
 			if params.index not in state.selector_map:
 				print(state.selector_map)
-				raise Exception(f'Element with index {params.index} does not exist - retry')
+				raise Exception(
+					f'Element with index {params.index} does not exist - retry or use alternative actions'
+				)
 
 			xpath = state.selector_map[params.index]
 			driver = browser._get_driver()
@@ -85,7 +87,9 @@ class Controller:
 		def input_text(params: InputTextAction, browser: Browser):
 			state = browser._cached_state
 			if params.index not in state.selector_map:
-				raise Exception(f'Element index {params.index} not found in selector map')
+				raise Exception(
+					f'Element index {params.index} does not exist - retry or use alternative actions'
+				)
 
 			xpath = state.selector_map[params.index]
 			browser._input_text_by_xpath(xpath, params.text)

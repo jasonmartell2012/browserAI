@@ -47,7 +47,7 @@ class AgentSystemPrompt:
 		    str: Important rules
 		"""
 		return """
-1. Only use indexes that exist in the input list for click or input text actions
+1. Only use indexes that exist in the input list for click or input text actions. If no indexes exist, try alternative actions, e.g. go back, search google etc.
 2. If stuck, try alternative approaches, e.g. go back, search google, or extract_page_content
 3. When you are done with the complete task, use the done action. Make sure to have all information the user needs and return the result.
 4. If an image is provided, use it to understand the context, the bounding boxes around the buttons have the same indexes as the interactive elements.
@@ -64,8 +64,8 @@ Example:
 _[:] Text content...
 
 Explanation:
-index[:] Interactible element with index. You can only interact with all elements which are clickable and refer to them by their index. DO NOT click on elements without index and do not make up an index or there will be an error.
-_[:] elements are just to give you more context, but not interactable.
+index[:] Interactible element with index. You can only interact with all elements which are clickable and refer to them by their index.
+_[:] elements are just for more context, but not interactable.
 \t: Tab indent (1 tab for depth 1 etc.). This is to help you understand which elements belong to each other.
 """
 
