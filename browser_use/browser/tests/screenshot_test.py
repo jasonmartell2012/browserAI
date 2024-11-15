@@ -31,3 +31,7 @@ def test_take_full_page_screenshot(browser):
 		base64.b64decode(screenshot_b64)
 	except Exception as e:
 		pytest.fail(f'Failed to decode base64 screenshot: {str(e)}')
+
+
+if __name__ == '__main__':
+	test_take_full_page_screenshot(BrowserService(headless=False))

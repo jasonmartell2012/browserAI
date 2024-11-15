@@ -1,3 +1,4 @@
+from typing import Dict, List
 from pydantic import BaseModel
 
 
@@ -25,3 +26,28 @@ class ProcessedDomContent(BaseModel):
 			else:
 				formatted_text += f'{item.index}:{item_depth}{item.text}\n'
 		return formatted_text
+
+
+class ElementState(BaseModel):
+	isVisible: bool
+	isTopElement: bool
+
+
+class TextState(BaseModel):
+	isVisible: bool
+
+
+class ElementCheckResult(BaseModel):
+	xpath: str
+	isVisible: bool
+	isTopElement: bool
+
+
+class TextCheckResult(BaseModel):
+	xpath: str
+	isVisible: bool
+
+
+class BatchCheckResults(BaseModel):
+	elements: Dict[str, ElementCheckResult]
+	texts: Dict[str, TextCheckResult]
