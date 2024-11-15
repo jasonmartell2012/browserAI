@@ -25,3 +25,12 @@ class ProcessedDomContent(BaseModel):
 			else:
 				formatted_text += f'{item.index}:{item_depth}{item.text}\n'
 		return formatted_text
+
+
+class ElementState(BaseModel):
+	isVisible: bool
+	isTopElement: bool
+
+
+class TextState(BaseModel):
+	isVisible: bool

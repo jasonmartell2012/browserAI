@@ -3,9 +3,8 @@ import logging
 from bs4 import BeautifulSoup, NavigableString, PageElement, Tag
 from selenium.webdriver.remote.webelement import WebElement
 from selenium import webdriver
-from selenium.webdriver.common.by import By
 
-from browser_use.dom.views import DomContentItem, ProcessedDomContent
+from browser_use.dom.views import DomContentItem, ProcessedDomContent, ElementState, TextState
 from browser_use.utils import time_execution_sync
 
 
@@ -75,32 +74,34 @@ class DomService:
 
 				# Process interactive or leaf elements
 				if self._is_interactive_element(element) or self._is_leaf_element(element):
-					if (
-						self._is_active(element)
-						and self._is_top_element(element, xpath=element_xpath)
-						and self._is_visible(element, xpath=element_xpath)
-					):
-						text_content = self._extract_text_from_all_children(element)
-						tag_name = element.name
+					if self._is_active(element):
+						element_state = self._check_element_state(element, element_xpath)
+						if element_state.isVisible and element_state.isTopElement:
+							text_content = self._extract_text_from_all_children(element)
+							tag_name = element.name
 
-						attributes = self._get_essential_attributes(element)
+							attributes = self._get_essential_attributes(element)
 
-						output_string = f"<{tag_name}{' ' + attributes if attributes else ''}>{text_content}</{tag_name}>"
+							output_string = f"<{tag_name}{' ' + attributes if attributes else ''}>{text_content}</{tag_name}>"
 
-						depth = len(current_path)
+							depth = len(current_path)
 
-						output_items.append(
-							DomContentItem(
-								index=current_index, text=output_string, clickable=True, depth=depth
+							output_items.append(
+								DomContentItem(
+									index=current_index,
+									text=output_string,
+									clickable=True,
+									depth=depth,
+								)
 							)
-						)
 
-						selector_map[current_index] = element_xpath
+							selector_map[current_index] = element_xpath
 
-						current_index += 1
+							current_index += 1
 
 			elif isinstance(element, NavigableString) and element.strip():
-				if self._is_visible(element, xpath=current_xpath):
+				text_state = self._check_text_state(element, current_xpath)
+				if text_state.isVisible:
 					# Skip text nodes that are direct children of already processed elements
 					if element.parent in [e[0] for e in dom_queue]:
 						continue
@@ -271,99 +272,108 @@ class DomService:
 
 		return ' '.join(attrs)
 
-	def _is_visible(self, element: Tag | NavigableString, xpath: str | None = None) -> bool:
-		if not isinstance(element, Tag):
-			return self._is_text_visible(element, xpath)
-
+	def _check_element_state(self, element: Tag, xpath: str) -> ElementState:
+		"""Combined check for element visibility and top element status.
+		Checks if element is both visible and is the topmost element at its position."""
 		element_id = element.get('id', '')
-		if element_id:
-			js_selector = f'document.getElementById("{element_id}")'
-		else:
-			js_selector = f'document.evaluate("{xpath}", document, null, XPathResult.FIRST_ORDERED_NODE_TYPE, null).singleNodeValue'
+		js_selector = (
+			('document.getElementById("%s")' % element_id)
+			if element_id
+			else (
+				'document.evaluate("%s", document, null, XPathResult.FIRST_ORDERED_NODE_TYPE, null).singleNodeValue'
+				% xpath
+			)
+		)
 
-		visibility_check = f"""
-			return (function() {{
-				const element = {js_selector};
-				if (!element) {{ return false; }}
-				return Boolean(element.checkVisibility({{
+		check_script = (
+			"""
+			return (function() {
+				const element = %s;
+				if (!element) return { isVisible: false, isTopElement: false };
+				
+				// Check if element is visible (not hidden by CSS or opacity)
+				const isVisible = element.checkVisibility({
 					checkOpacity: true,
 					checkVisibilityCSS: true
-				}}));
-			}}());
-		"""
+				});
+				
+				if (!isVisible) return { isVisible: false, isTopElement: false };
+				
+				// Check if element is the topmost at its position
+				const rect = element.getBoundingClientRect();
+				
+				// Check multiple points within the element to ensure it's truly clickable
+				const points = [
+					{x: rect.left + rect.width * 0.25, y: rect.top + rect.height * 0.25},
+					{x: rect.left + rect.width * 0.75, y: rect.top + rect.height * 0.25},
+					{x: rect.left + rect.width * 0.25, y: rect.top + rect.height * 0.75},
+					{x: rect.left + rect.width * 0.75, y: rect.top + rect.height * 0.75},
+					{x: rect.left + rect.width / 2, y: rect.top + rect.height / 2}
+				];
+				
+				const isTopElement = points.some(point => {
+					const topEl = document.elementFromPoint(point.x, point.y);
+					let current = topEl;
+					while (current && current !== document.body) {
+						if (current === element) return true;
+						current = current.parentElement;
+					}
+					return false;
+				});
+				
+				return {
+					isVisible: true,
+					isTopElement: isTopElement
+				};
+			})();
+			"""
+			% js_selector
+		)
 
 		try:
-			is_visible = self.driver.execute_script(visibility_check)
-			return bool(is_visible)
+			result = self.driver.execute_script(check_script)
+			return ElementState(**result)
 		except Exception:
-			return False
+			return ElementState(isVisible=False, isTopElement=False)
 
-	def _is_text_visible(self, element: NavigableString, parent_xpath: str | None = None) -> bool:
+	def _check_text_state(
+		self, element: NavigableString, parent_xpath: str | None = None
+	) -> TextState:
 		"""Check if text node is visible using JavaScript."""
 		parent = element.parent
 		if not parent:
-			return False
+			return TextState(isVisible=False)
 
-		visibility_check = f"""
-			return (function() {{
-				const parent = document.evaluate("{parent_xpath}", document, null, XPathResult.FIRST_ORDERED_NODE_TYPE, null).singleNodeValue;
-				if (!parent) {{ return false; }}
+		check_script = """
+			return (function() {
+				const parent = document.evaluate("%s", document, null, XPathResult.FIRST_ORDERED_NODE_TYPE, null).singleNodeValue;
+				if (!parent) return { isVisible: false };
 				
 				const range = document.createRange();
-				const textNode = parent.childNodes[{list(parent.children).index(element)}];
+				const textNode = parent.childNodes[%d];
 				range.selectNodeContents(textNode);
 				const rect = range.getBoundingClientRect();
 				
-				if (rect.width === 0 || rect.height === 0 || 
-					rect.top < 0 || rect.top > window.innerHeight) {{
-					return false;
-				}}
+				const isVisible = (
+					rect.width !== 0 && 
+					rect.height !== 0 && 
+					rect.top >= 0 && 
+					rect.top <= window.innerHeight &&
+					parent.checkVisibility({
+						checkOpacity: true,
+						checkVisibilityCSS: true
+					})
+				);
 				
-				return Boolean(parent.checkVisibility({{
-					checkOpacity: true,
-					checkVisibilityCSS: true
-				}}));
-			}}());
-		"""
-		try:
-			is_visible = self.driver.execute_script(visibility_check)
-			return bool(is_visible)
-		except Exception:
-			return False
+				return { isVisible: isVisible };
+			})();
+		""" % (parent_xpath, list(parent.children).index(element))
 
-	def _is_top_element(self, element: Tag | NavigableString, xpath: str) -> bool:
-		"""Check if element is the topmost at its position."""
-		check_top = f"""
-			return (function() {{
-				const elem = document.evaluate("{xpath}", document, null, XPathResult.FIRST_ORDERED_NODE_TYPE, null).singleNodeValue;
-				if (!elem) {{ return false; }}
-				
-				const rect = elem.getBoundingClientRect();
-				const points = [
-					{{x: rect.left + rect.width * 0.25, y: rect.top + rect.height * 0.25}},
-					{{x: rect.left + rect.width * 0.75, y: rect.top + rect.height * 0.25}}, 
-					{{x: rect.left + rect.width * 0.25, y: rect.top + rect.height * 0.75}},
-					{{x: rect.left + rect.width * 0.75, y: rect.top + rect.height * 0.75}},
-					{{x: rect.left + rect.width / 2, y: rect.top + rect.height / 2}}
-				];
-				
-				return Boolean(points.some(point => {{
-					const topEl = document.elementFromPoint(point.x, point.y);
-					let current = topEl;
-					while (current && current !== document.body) {{
-						if (current === elem) return true;
-						current = current.parentElement;
-					}}
-					return false;
-				}}));
-			}}());
-		"""
 		try:
-			is_top = self.driver.execute_script(check_top)
-			return bool(is_top)
+			result = self.driver.execute_script(check_script)
+			return TextState(**result)
 		except Exception:
-			logger.error(f'Error checking top element: {element}')
-			return False
+			return TextState(isVisible=False)
 
 	def _is_active(self, element: Tag) -> bool:
 		"""Check if element is active (not disabled)."""
