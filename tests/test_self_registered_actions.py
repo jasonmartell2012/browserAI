@@ -88,9 +88,6 @@ async def test_self_registered_actions_no_pydantic(llm, controller):
 	assert 'concatenate_strings' in action_names
 
 
-Additional test with mixed arguments
-
-
 @pytest.mark.asyncio
 async def test_mixed_arguments_actions(llm, controller):
 	"""Test actions with mixed argument types"""
