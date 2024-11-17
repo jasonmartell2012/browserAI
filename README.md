@@ -122,7 +122,7 @@ For more examples see the [examples](examples) folder or join the [Discord](http
 
 ## Telemetry
 
-We collect anonymous usage data to help us understand how the library is being used and to identify potential issues. There is no privacy risk, as no personal information is collected.
+We collect anonymous usage data to help us understand how the library is being used and to identify potential issues. There is no privacy risk, as no personal information is collected. We collect data with PostHog.
 
 You can opt out of telemetry by setting the `ANONYMIZED_TELEMETRY=false` environment variable.
 
