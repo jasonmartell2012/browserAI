@@ -53,6 +53,14 @@ ANTHROPIC_API_KEY=
     </a>
     <p><i>Prompt: Search the top 3 AI companies 2024 and find what out what concrete hardware each is using for their model. (1x speed)</i></p>
 </div>
+<div>
+    <img src="static/captcha.gif" alt="Solving Captcha" style="max-width:300px;">
+    <p><i>Prompt: Go to captcha.com/demos/features/captcha-demo.aspx and solve the captcha. (2x speed) 
+    NOTE: captchas are hard. For this example it works. But e.g. for iframes it does not.
+    
+    </i></p>
+</div>
+
 
 # Features ⭐
 
