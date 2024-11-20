@@ -54,11 +54,12 @@ ANTHROPIC_API_KEY=
     <p><i>Prompt: Search the top 3 AI companies 2024 and find what out what concrete hardware each is using for their model. (1x speed)</i></p>
 </div>
 <div>
-    <img src="https://i.imgur.com/PiNMNpS.gif" alt="Solving Captcha" style="max-width:300px;">
+    <img src="https://github.com/MagMueller/examples-browser-use/blob/main/captcha/captcha%20big.gif" alt="Solving Captcha" style="max-width:300px;">
     <p><i>Prompt: Go to captcha.com/demos/features/captcha-demo.aspx and solve the captcha. (2x speed) 
     NOTE: captchas are hard. For this example it works. But e.g. for iframes it does not.</i></p>
 </div>
 
+![Solving Captcha](https://github.com/MagMueller/examples-browser-use/blob/main/captcha/captcha%20big.gif)
 
 
 # Features ⭐
