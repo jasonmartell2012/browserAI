@@ -17,7 +17,7 @@ from browser_use import Agent
 
 llm = ChatOpenAI(model='gpt-4o')
 agent = Agent(
-	task='Find flights on kayak.com from Zurich to Beijing on 25.12.2024 one way, give me the cheapest among all',
+	task='Find flights on kayak.com from Zurich to Beijing on 25.12.2024 to 02.02.2025',
 	llm=llm,
 )
 
