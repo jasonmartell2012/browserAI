@@ -41,42 +41,6 @@ ANTHROPIC_API_KEY=
 
 # Demos
 
-
-<div>
-    <video src="https://github.com/MagMueller/examples-browser-use/raw/main/hugging_face/hugging_face_high_quality.mp4" controls style="max-width:300px;">
-    </video>
-    <p><i>Prompt: Look up models with a license of cc-by-sa-4.0 and sort by most likes on Hugging face, save top 5 to file. (1x speed)</i></p>
-</div>
-
-<div>
-    <video src="https://raw.githubusercontent.com/MagMueller/examples-browser-use/main/hugging_face/hugging_face_high_quality.mp4" controls style="max-width:300px;"></video>
-    <p><i>Prompt: Look up models with a license of cc-by-sa-4.0 and sort by most likes on Hugging face, save top 5 to file. (1x speed)</i></p>
-</div>
-
-<div>
-    <video src="https://media.githubusercontent.com/media/MagMueller/examples-browser-use/main/hugging_face/hugging_face_high_quality.mp4" controls style="max-width:300px;"></video>
-    <p><i>Prompt: Look up models with a license of cc-by-sa-4.0 and sort by most likes on Hugging face, save top 5 to file. (1x speed)</i></p>
-</div>
-
-<div>
-    <video 
-        src="https://raw.githubusercontent.com/MagMueller/examples-browser-use/main/hugging_face/hugging_face_high_quality.mp4" 
-        controls 
-        style="max-width:300px;"
-        type="video/mp4"
-        preload="auto">
-    </video>
-    <p><i>Prompt: Look up models with a license of cc-by-sa-4.0 and sort by most likes on Hugging face, save top 5 to file. (1x speed)</i></p>
-</div>
-
-<div>
-    <video controls style="max-width:300px;">
-        <source src="https://raw.githubusercontent.com/MagMueller/examples-browser-use/main/hugging_face/hugging_face_high_quality.mp4" type="video/mp4">
-        Your browser does not support the video tag.
-    </video>
-    <p><i>Prompt: Look up models with a license of cc-by-sa-4.0 and sort by most likes on Hugging face, save top 5 to file. (1x speed)</i></p>
-</div>
-
 <div>
     <img src="https://github.com/MagMueller/examples-browser-use/blob/main/captcha/captcha%20big.gif" alt="Solving Captcha" style="max-width:300px;">
     <p><i>Prompt: Solve the captcha on captcha.com/demos/features/captcha-demo.aspx . (2x speed) 
@@ -84,7 +48,9 @@ ANTHROPIC_API_KEY=
 </div>
 
 
-https://github.com/user-attachments/assets/de73ee39-432c-4b97-b4e8-939fd7f323b3
+
+[![Custom Functions](https://github.com/user-attachments/assets/de73ee39-432c-4b97-b4e8-939fd7f323b3)](https://github.com/user-attachments/assets/de73ee39-432c-4b97-b4e8-939fd7f323b3)
+Prompt: Look up models with a license of cc-by-sa-4.0 and sort by most likes on Hugging face, save top 5 to file. (1x speed)
 
 
 
