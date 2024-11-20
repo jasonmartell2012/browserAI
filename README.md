@@ -41,42 +41,18 @@ ANTHROPIC_API_KEY=
 
 # Demos
 
+
 <div>
-    <a href="https://www.loom.com/share/63612b5994164cb1bb36938d62fe9983">
-      <img style="max-width:300px;" src="https://cdn.loom.com/sessions/thumbnails/63612b5994164cb1bb36938d62fe9983-7133f9e169672e6f-full-play.gif">
-    </a>
-    <p><i>Prompt: Go to hackernews on show hn and give me top 10 post titles, their points and hours. Calculate for each the ratio of points per hour. (1x speed) </i></p>
+    <video src="https://github.com/MagMueller/examples-browser-use/raw/main/hugging_face/hugging_face_high_quality.mp4" controls style="max-width:300px;">
+    </video>
+    <p><i>Prompt: Look up models with a license of cc-by-sa-4.0 and sort by most likes on Hugging face, save top 5 to file. (1x speed)</i></p>
 </div>
-<div>
-    <a href="https://www.loom.com/share/2af938b9f8024647950a9e18b3946054">
-      <img style="max-width:300px;" src="https://cdn.loom.com/sessions/thumbnails/2af938b9f8024647950a9e18b3946054-b99c733cf670e568-full-play.gif">
-    </a>
-    <p><i>Prompt: Search the top 3 AI companies 2024 and find what out what concrete hardware each is using for their model. (1x speed)</i></p>
-</div>
+
 <div>
     <img src="https://github.com/MagMueller/examples-browser-use/blob/main/captcha/captcha%20big.gif" alt="Solving Captcha" style="max-width:300px;">
     <p><i>Prompt: Solve the captcha on captcha.com/demos/features/captcha-demo.aspx . (2x speed) 
     NOTE: captchas are hard. For this example it works. But e.g. for iframes it does not.</i></p>
 </div>
-<div>
-    <a href="https://github.com/MagMueller/examples-browser-use/blob/main/hugging_face/hugging_face_high_quality.mp4">
-      <img style="max-width:300px;" src="https://github.com/MagMueller/examples-browser-use/blob/main/hugging_face/hugging_face_high_quality.mp4">
-    </a>
-    <p><i>Prompt: Look up models with a license of cc-by-sa-4.0 and sort by most likes on Hugging face, save top 5 to file. (1x speed)</i></p>
-</div>
-
-<div>
-    <video controls style="max-width:300px;">
-        <source src="https://github.com/MagMueller/examples-browser-use/blob/main/hugging_face/hugging_face_high_quality.mp4" type="video/mp4">
-        Your browser does not support the video tag.
-    </video>
-    <p><i>Prompt: Look up models with a license of cc-by-sa-4.0 and sort by most likes on Hugging face, save top 5 to file. (1x speed)</i></p>
-</div>
-
-https://github.com/MagMueller/examples-browser-use/assets/YOUR_USER_ID/hugging_face_high_quality.mp4
-
-
-
 
 # Features ⭐
 
