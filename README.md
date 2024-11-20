@@ -65,6 +65,15 @@ ANTHROPIC_API_KEY=
     <p><i>Prompt: Look up models with a license of cc-by-sa-4.0 and sort by most likes on Hugging face, save top 5 to file. (1x speed)</i></p>
 </div>
 
+<div>
+    <video controls style="max-width:300px;">
+        <source src="https://github.com/MagMueller/examples-browser-use/blob/main/hugging_face/hugging_face_high_quality.mp4" type="video/mp4">
+        Your browser does not support the video tag.
+    </video>
+    <p><i>Prompt: Look up models with a license of cc-by-sa-4.0 and sort by most likes on Hugging face, save top 5 to file. (1x speed)</i></p>
+</div>
+
+https://github.com/MagMueller/examples-browser-use/assets/YOUR_USER_ID/hugging_face_high_quality.mp4
 
 
 
