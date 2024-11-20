@@ -55,11 +55,18 @@ ANTHROPIC_API_KEY=
 </div>
 <div>
     <img src="https://github.com/MagMueller/examples-browser-use/blob/main/captcha/captcha%20big.gif" alt="Solving Captcha" style="max-width:300px;">
-    <p><i>Prompt: Go to captcha.com/demos/features/captcha-demo.aspx and solve the captcha. (2x speed) 
+    <p><i>Prompt: Solve the captcha on captcha.com/demos/features/captcha-demo.aspx . (2x speed) 
     NOTE: captchas are hard. For this example it works. But e.g. for iframes it does not.</i></p>
 </div>
+<div>
+    <a href="https://github.com/MagMueller/examples-browser-use/blob/main/hugging_face/hugging_face_high_quality.mp4">
+      <img style="max-width:300px;" src="https://github.com/MagMueller/examples-browser-use/blob/main/hugging_face/hugging_face_high_quality.mp4">
+    </a>
+    <p><i>Prompt: Look up models with a license of cc-by-sa-4.0 and sort by most likes on Hugging face, save top 5 to file. (1x speed)</i></p>
+</div>
 
-![Solving Captcha](https://github.com/MagMueller/examples-browser-use/blob/main/captcha/captcha%20big.gif)
+
+
 
 
 # Features ⭐
