@@ -44,6 +44,7 @@ ANTHROPIC_API_KEY=
 <div style="font-size: 1.5em;">
     Prompt: Find flights on kayak.com from Zurich to Beijing on 25.12.2024 to 02.02.2025. (8x speed)
 </div>
+
 ![flight search 8x 10fps](https://github.com/user-attachments/assets/ea605d4a-90e6-481e-a569-f0e0db7e6390)
 
 <div>
@@ -54,6 +55,7 @@ ANTHROPIC_API_KEY=
 <div style="font-size: 1.5em;">
     Prompt: Look up models with a license of cc-by-sa-4.0 and sort by most likes on Hugging face, save top 5 to file. (1x speed)
 </div>
+
 https://github.com/user-attachments/assets/de73ee39-432c-4b97-b4e8-939fd7f323b3
 
 # Features ⭐
