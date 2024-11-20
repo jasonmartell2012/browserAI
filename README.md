@@ -41,15 +41,14 @@ ANTHROPIC_API_KEY=
 
 # Demos
 
-
+![flight search 8x 10fps](https://github.com/user-attachments/assets/ea605d4a-90e6-481e-a569-f0e0db7e6390)
+<div style="font-size: 1.5em;">
+    Prompt: Find flights on kayak.com from Zurich to Beijing on 25.12.2024 to 02.02.2025. (8x speed)
+</div>
 <div>
     <img src="https://github.com/MagMueller/examples-browser-use/blob/main/captcha/captcha%20big.gif" alt="Solving Captcha" style="max-width:300px;">
     <p><i>Prompt: Solve the captcha. (2x speed)</i></p>
 </div>
-
-![flight search 8x 10fps](https://github.com/user-attachments/assets/ea605d4a-90e6-481e-a569-f0e0db7e6390)
-
-
 
 https://github.com/user-attachments/assets/de73ee39-432c-4b97-b4e8-939fd7f323b3
 <div style="font-size: 1.5em;">
