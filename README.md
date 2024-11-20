@@ -52,7 +52,7 @@ ANTHROPIC_API_KEY=
 [![Custom Functions](https://github.com/user-attachments/assets/de73ee39-432c-4b97-b4e8-939fd7f323b3)](https://github.com/user-attachments/assets/de73ee39-432c-4b97-b4e8-939fd7f323b3)
 Prompt: Look up models with a license of cc-by-sa-4.0 and sort by most likes on Hugging face, save top 5 to file. (1x speed)
 
-
+https://github.com/user-attachments/assets/de73ee39-432c-4b97-b4e8-939fd7f323b3
 
 # Features ⭐
 
