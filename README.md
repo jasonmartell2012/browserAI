@@ -83,6 +83,11 @@ ANTHROPIC_API_KEY=
     NOTE: captchas are hard. For this example it works. But e.g. for iframes it does not.</i></p>
 </div>
 
+
+https://github.com/user-attachments/assets/de73ee39-432c-4b97-b4e8-939fd7f323b3
+
+
+
 # Features ⭐
 
 - Vision + html extraction
