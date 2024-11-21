@@ -20,13 +20,15 @@ from browser_use.controller.views import (
 	SwitchTabAction,
 )
 from browser_use.utils import time_execution_sync
+from typing import Any, Optional
 
 logger = logging.getLogger(__name__)
 
 
 class Controller:
-	def __init__(self, keep_open: bool = False):
+	def __init__(self, keep_open: bool = False, variables: Optional[dict[str, Any]] = None):
 		self.browser = Browser(keep_open=keep_open)
+		self.variables = variables or {} 
 		self.registry = Registry()
 		self._register_default_actions()
 
@@ -97,8 +99,15 @@ class Controller:
 				)
 
 			xpath = state.selector_map[params.index]
-			browser._input_text_by_xpath(xpath, params.text)
-			msg = f'⌨️  Input text "{params.text}" into element {params.index}: {xpath}'
+
+			# Resolve variables in the text
+			resolved_text = self._resolve_variables(params.text, self.variables)
+
+			browser._input_text_by_xpath(xpath, resolved_text)
+			
+			# TODO: this exposes the @param to the console! might need to update the prompt to ignore @param input mismatches.
+			msg = f'⌨️  Input text "{resolved_text}" into element {params.index}: {xpath}'
+			#msg = f'⌨️  Input text "{params.text}" into element {params.index}: {xpath}'
 			return ActionResult(extracted_content=msg)
 
 		# Tab Management Actions
@@ -177,6 +186,13 @@ class Controller:
 		@param description: Describe the LLM what the function does (better description == better function calling)
 		"""
 		return self.registry.action(description, **kwargs)
+	
+	def _resolve_variables(self, text: str, variables: dict[str, Any]) -> str:
+		"""Replace variable references in the text with their values."""
+
+		for var_name, var_info in variables.items():
+			text = text.replace(f"@{var_name}", var_info['value'])
+		return text
 
 	@time_execution_sync('--act')
 	def act(self, action: ActionModel) -> ActionResult:
