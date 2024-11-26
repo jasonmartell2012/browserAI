@@ -40,6 +40,19 @@ class SystemPrompt:
 		"""
 		return """{"current_state": {"valuation_previous_goal": "Success", "memory": "We applied already for 3/7 jobs, 1. ..., 2. ..., 3. ...", "next_goal": "Click on the button x to apply for the next job"}, "action": {"click_element": {"index": 44,"num_clicks": 2}}}"""
 
+	@staticmethod
+	def validate_ultimate_task(task: str) -> str:
+		"""
+		Returns the prompt to validate the ultimate task.
+
+		Args:
+		    task (str): Task to validate
+
+		Returns:
+		    str: Validate task prompt
+		"""
+		return f"Your ultimate task is: {task}. If you acheived your ultimate task, stop everything and use the done action in the next step to complete the task. If not, continue as usual."
+ 
 	def important_rules(self) -> str:
 		"""
 		Returns the important rules for the agent.

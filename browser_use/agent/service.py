@@ -189,7 +189,8 @@ class Agent:
 		"""Get next action from LLM based on current state"""
 
 		structured_llm = self.llm.with_structured_output(self.AgentOutput, include_raw=True)
-		response: dict[str, Any] = await structured_llm.ainvoke(input_messages)  # type: ignore
+		input_messages_validate_task = input_messages + [HumanMessage(content=self.system_prompt_class.validate_ultimate_task(task=self.task))]
+		response: dict[str, Any] = await structured_llm.ainvoke(input_messages_validate_task)  # type: ignore
 
 		parsed: AgentOutput = response['parsed']
 
