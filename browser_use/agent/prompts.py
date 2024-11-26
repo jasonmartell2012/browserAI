@@ -51,7 +51,7 @@ class SystemPrompt:
 		Returns:
 		    str: Validate task prompt
 		"""
-		return f"Your ultimate task is: {task}. If you acheived your ultimate task, stop everything and use the done action in the next step to complete the task. If not, continue as usual."
+		return f"Your ultimate task is: {task}. If you achieved your ultimate task, stop everything and use the done action in the next step to complete the task. If not, continue as usual."
  
 	def important_rules(self) -> str:
 		"""
