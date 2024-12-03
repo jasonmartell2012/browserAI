@@ -155,6 +155,16 @@ class BrowserContext:
 		context = await self._create_context(playwright_browser)
 		page = await context.new_page()
 
+		# Wait for the page to be stable
+		await page.wait_for_load_state("domcontentloaded")
+		
+		# Get title with a timeout and fallback
+		title = ""
+		try:
+			title = await asyncio.wait_for(page.title(), timeout=5.0)
+		except (asyncio.TimeoutError, Exception) as e:
+			logger.warning(f"Failed to get page title: {str(e)}")
+
 		# Instead of calling _update_state(), create an empty initial state
 		initial_state = BrowserState(
 			element_tree=DOMElementNode(
@@ -162,7 +172,7 @@ class BrowserContext:
 			),
 			selector_map={},
 			url=page.url,
-			title=await page.title(),
+			title=title,
 			screenshot=None,
 			tabs=[],
 		)
