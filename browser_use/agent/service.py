@@ -8,7 +8,7 @@ import time
 import uuid
 from pathlib import Path
 from typing import Any, Optional, Type, TypeVar
-
+from langchain_core.messages import HumanMessage 
 from dotenv import load_dotenv
 from langchain_core.language_models.chat_models import BaseChatModel
 from langchain_core.messages import (
