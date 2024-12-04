@@ -10,7 +10,7 @@ import os
 import time
 import uuid
 from dataclasses import dataclass, field
-from typing import TYPE_CHECKING, TypedDict
+from typing import TYPE_CHECKING, TypedDict, Union
 
 from playwright.async_api import Browser as PlaywrightBrowser
 from playwright.async_api import (
@@ -46,6 +46,9 @@ class BrowserContextConfig:
 	Default values:
 		cookies_file: None
 			Path to cookies file for persistence
+   
+		user_data_dir: None
+			Path to user data directory for browser profile
 
 		disable_security: False
 			Disable browser security features
@@ -71,6 +74,7 @@ class BrowserContextConfig:
 	"""
 
 	cookies_file: str | None = None
+	user_data_dir: str | None = None
 	minimum_wait_page_load_time: float = 0.5
 	wait_for_network_idle_page_load_time: float = 1
 	maximum_wait_page_load_time: float = 5
@@ -197,11 +201,14 @@ class BrowserContext:
 		session = await self.get_session()
 		return session.current_page
 
-	async def _create_context(self, browser: PlaywrightBrowser):
+	async def _create_context(self, browser: Union[PlaywrightBrowser, PlaywrightBrowserContext]):
 		"""Creates a new browser context with anti-detection measures and loads cookies if available."""
-		context = await browser.new_context(
-			viewport=self.config.browser_window_size,
-			user_agent=(
+		if isinstance(browser, PlaywrightBrowserContext): # to check if it's a Browser or BrowserContext object
+			context = browser
+		else:
+			context = await browser.new_context(
+				viewport=self.config.browser_window_size,
+				user_agent=(
 				'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 '
 				'(KHTML, like Gecko) Chrome/85.0.4183.102 Safari/537.36'
 			),
@@ -215,7 +222,7 @@ class BrowserContext:
 			await context.tracing.start(screenshots=True, snapshots=True, sources=True)
 
 		# Load cookies if they exist
-		if self.config.cookies_file and os.path.exists(self.config.cookies_file):
+		if self.config.cookies_file and os.path.exists(self.config.cookies_file) and not self.config.user_data_dir:
 			with open(self.config.cookies_file, 'r') as f:
 				cookies = json.load(f)
 				logger.info(f'Loaded {len(cookies)} cookies from {self.config.cookies_file}')
