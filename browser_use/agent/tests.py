@@ -7,11 +7,10 @@ from browser_use.agent.views import (
 	AgentHistoryList,
 	AgentOutput,
 )
-from browser_use.browser.views import BrowserState, TabInfo
+from browser_use.browser.views import BrowserState, BrowserStateHistory, TabInfo
 from browser_use.controller.registry.service import Registry
-from browser_use.controller.registry.views import ActionModel
 from browser_use.controller.views import ClickElementAction, DoneAction, ExtractPageContentAction
-from browser_use.dom.views import DomContentItem, ProcessedDomContent
+from browser_use.dom.views import DOMElementNode
 
 
 @pytest.fixture
@@ -21,11 +20,15 @@ def sample_browser_state():
 		title='Example Page',
 		tabs=[TabInfo(url='https://example.com', title='Example Page', page_id=1)],
 		screenshot='screenshot1.png',
-		items=[
-			DomContentItem(index=1, text='Click me', is_text_only=False, depth=0),
-			DomContentItem(index=2, text='Some text', is_text_only=True, depth=1),
-		],
-		selector_map={1: '//button[1]', 2: '//div[1]'},
+		element_tree=DOMElementNode(
+			tag_name='root',
+			is_visible=True,
+			parent=None,
+			xpath='',
+			attributes={},
+			children=[],
+		),
+		selector_map={},
 	)
 
 
@@ -74,13 +77,11 @@ def sample_history(action_registry):
 				action=click_action,
 			),
 			result=ActionResult(is_done=False),
-			state=BrowserState(
+			state=BrowserStateHistory(
 				url='https://example.com',
 				title='Page 1',
 				tabs=[TabInfo(url='https://example.com', title='Page 1', page_id=1)],
 				screenshot='screenshot1.png',
-				items=[DomContentItem(index=1, text='Button', is_text_only=False, depth=0)],
-				selector_map={1: '//button[1]'},
 			),
 		),
 		AgentHistory(
@@ -97,13 +98,11 @@ def sample_history(action_registry):
 				extracted_content='Extracted text',
 				error='Failed to extract completely',
 			),
-			state=BrowserState(
+			state=BrowserStateHistory(
 				url='https://example.com/page2',
 				title='Page 2',
 				tabs=[TabInfo(url='https://example.com/page2', title='Page 2', page_id=2)],
 				screenshot='screenshot2.png',
-				items=[DomContentItem(index=2, text='Content', is_text_only=True, depth=0)],
-				selector_map={2: '//div[1]'},
 			),
 		),
 		AgentHistory(
@@ -116,13 +115,11 @@ def sample_history(action_registry):
 				action=done_action,
 			),
 			result=ActionResult(is_done=True, extracted_content='Task completed', error=None),
-			state=BrowserState(
+			state=BrowserStateHistory(
 				url='https://example.com/page2',
 				title='Page 2',
 				tabs=[TabInfo(url='https://example.com/page2', title='Page 2', page_id=2)],
 				screenshot='screenshot3.png',
-				items=[DomContentItem(index=3, text='Final', is_text_only=True, depth=0)],
-				selector_map={3: '//div[2]'},
 			),
 		),
 	]

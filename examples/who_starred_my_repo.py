@@ -10,7 +10,7 @@ from langchain_openai import ChatOpenAI
 from pydantic import BaseModel
 
 from browser_use.agent.service import Agent
-from browser_use.browser.service import Browser
+from browser_use.browser.context import BrowserContext
 from browser_use.controller.service import Controller
 
 # Initialize controller first
@@ -48,13 +48,13 @@ class PageSaver(BaseModel):
 
 
 @controller.action('Save current page info', param_model=PageSaver, requires_browser=True)
-async def save_page_info(params: PageSaver, browser: Browser):
+async def save_page_info(params: PageSaver, browser: BrowserContext):
 	session = await browser.get_session()
 	state = session.cached_state
 	with open(params.filename, 'w') as f:
 		f.write(f'URL: {state.url}\n')
 		f.write(f'Title: {state.title}\n')
-		f.write(f'HTML: {state.items}\n')
+		# f.write(f'HTML: {state.element_tree}\n')
 
 
 class Job(BaseModel):

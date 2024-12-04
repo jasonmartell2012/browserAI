@@ -3,7 +3,7 @@ import logging
 from main_content_extractor import MainContentExtractor
 
 from browser_use.agent.views import ActionModel, ActionResult
-from browser_use.browser.service import Browser
+from browser_use.browser.context import BrowserContext
 from browser_use.controller.registry.service import Registry
 from browser_use.controller.views import (
 	ClickElementAction,
@@ -23,9 +23,8 @@ logger = logging.getLogger(__name__)
 
 class Controller:
 	def __init__(
-		self, headless: bool = False, keep_open: bool = False, cookies_path: str | None = None
+		self,
 	):
-		self.browser = Browser(headless=headless, keep_open=keep_open, cookies_path=cookies_path)
 		self.registry = Registry()
 		self._register_default_actions()
 
@@ -36,46 +35,45 @@ class Controller:
 		@self.registry.action(
 			'Search Google', param_model=SearchGoogleAction, requires_browser=True
 		)
-		async def search_google(params: SearchGoogleAction, browser: Browser):
+		async def search_google(params: SearchGoogleAction, browser: BrowserContext):
 			page = await browser.get_current_page()
 			await page.goto(f'https://www.google.com/search?q={params.query}')
-			await browser.wait_for_page_load()
+			await page.wait_for_load_state()
 
 		@self.registry.action('Navigate to URL', param_model=GoToUrlAction, requires_browser=True)
-		async def go_to_url(params: GoToUrlAction, browser: Browser):
+		async def go_to_url(params: GoToUrlAction, browser: BrowserContext):
 			page = await browser.get_current_page()
 			await page.goto(params.url)
-			await browser.wait_for_page_load()
+			await page.wait_for_load_state()
 
 		@self.registry.action('Go back', requires_browser=True)
-		async def go_back(browser: Browser):
+		async def go_back(browser: BrowserContext):
 			page = await browser.get_current_page()
 			await page.go_back()
-			await browser.wait_for_page_load()
+			await page.wait_for_load_state()
 
 		# Element Interaction Actions
 		@self.registry.action(
 			'Click element', param_model=ClickElementAction, requires_browser=True
 		)
-		async def click_element(params: ClickElementAction, browser: Browser):
+		async def click_element(params: ClickElementAction, browser: BrowserContext):
 			session = await browser.get_session()
 			state = session.cached_state
 
 			if params.index not in state.selector_map:
-				print(state.selector_map)
 				raise Exception(
 					f'Element with index {params.index} does not exist - retry or use alternative actions'
 				)
 
-			xpath = state.selector_map[params.index]
+			element_node = state.selector_map[params.index]
 			initial_pages = len(session.context.pages)
 
 			msg = None
 
 			for _ in range(params.num_clicks):
 				try:
-					await browser._click_element_by_xpath(xpath)
-					msg = f'🖱️  Clicked element {params.index}: {xpath}'
+					await browser._click_element_node(element_node)
+					msg = f'🖱️  Clicked element {params.index}: {element_node.xpath}'
 					if params.num_clicks > 1:
 						msg += f' ({_ + 1}/{params.num_clicks} clicks)'
 				except Exception as e:
@@ -88,7 +86,7 @@ class Controller:
 			return ActionResult(extracted_content=f'{msg}')
 
 		@self.registry.action('Input text', param_model=InputTextAction, requires_browser=True)
-		async def input_text(params: InputTextAction, browser: Browser):
+		async def input_text(params: InputTextAction, browser: BrowserContext):
 			session = await browser.get_session()
 			state = session.cached_state
 
@@ -97,20 +95,21 @@ class Controller:
 					f'Element index {params.index} does not exist - retry or use alternative actions'
 				)
 
-			xpath = state.selector_map[params.index]
-			await browser._input_text_by_xpath(xpath, params.text)
-			msg = f'⌨️  Input "{params.text}" into {params.index}: {xpath}'
+			element_node = state.selector_map[params.index]
+			await browser._input_text_element_node(element_node, params.text)
+			msg = f'⌨️  Input "{params.text}" into {params.index}: {element_node.xpath}'
 			return ActionResult(extracted_content=msg)
 
 		# Tab Management Actions
 		@self.registry.action('Switch tab', param_model=SwitchTabAction, requires_browser=True)
-		async def switch_tab(params: SwitchTabAction, browser: Browser):
+		async def switch_tab(params: SwitchTabAction, browser: BrowserContext):
 			await browser.switch_to_tab(params.page_id)
 			# Wait for tab to be ready
-			await browser.wait_for_page_load()
+			page = await browser.get_current_page()
+			await page.wait_for_load_state()
 
 		@self.registry.action('Open new tab', param_model=OpenTabAction, requires_browser=True)
-		async def open_tab(params: OpenTabAction, browser: Browser):
+		async def open_tab(params: OpenTabAction, browser: BrowserContext):
 			await browser.create_new_tab(params.url)
 
 		# Content Actions
@@ -119,7 +118,7 @@ class Controller:
 			param_model=ExtractPageContentAction,
 			requires_browser=True,
 		)
-		async def extract_content(params: ExtractPageContentAction, browser: Browser):
+		async def extract_content(params: ExtractPageContentAction, browser: BrowserContext):
 			page = await browser.get_current_page()
 
 			content = MainContentExtractor.extract(  # type: ignore
@@ -129,7 +128,7 @@ class Controller:
 			return ActionResult(extracted_content=content)
 
 		@self.registry.action('Complete task', param_model=DoneAction, requires_browser=True)
-		async def done(params: DoneAction, browser: Browser):
+		async def done(params: DoneAction, browser: BrowserContext):
 			session = await browser.get_session()
 			state = session.cached_state
 			return ActionResult(is_done=True, extracted_content=params.text)
@@ -139,7 +138,7 @@ class Controller:
 			param_model=ScrollAction,
 			requires_browser=True,
 		)
-		async def scroll_down(params: ScrollAction, browser: Browser):
+		async def scroll_down(params: ScrollAction, browser: BrowserContext):
 			page = await browser.get_current_page()
 			if params.amount is not None:
 				await page.evaluate(f'window.scrollBy(0, {params.amount});')
@@ -158,7 +157,7 @@ class Controller:
 			param_model=ScrollAction,
 			requires_browser=True,
 		)
-		async def scroll_up(params: ScrollAction, browser: Browser):
+		async def scroll_up(params: ScrollAction, browser: BrowserContext):
 			page = await browser.get_current_page()
 			if params.amount is not None:
 				await page.evaluate(f'window.scrollBy(0, -{params.amount});')
@@ -179,13 +178,13 @@ class Controller:
 		return self.registry.action(description, **kwargs)
 
 	@time_execution_sync('--act')
-	async def act(self, action: ActionModel) -> ActionResult:
+	async def act(self, action: ActionModel, browser_context: BrowserContext) -> ActionResult:
 		"""Execute an action"""
 		try:
 			for action_name, params in action.model_dump(exclude_unset=True).items():
 				if params is not None:
 					result = await self.registry.execute_action(
-						action_name, params, browser=self.browser
+						action_name, params, browser=browser_context
 					)
 					if isinstance(result, str):
 						return ActionResult(extracted_content=result)

@@ -19,7 +19,7 @@ from browser_use import ActionResult, Agent, Controller
 
 load_dotenv()
 
-controller = Controller(keep_open=True)
+controller = Controller()
 
 
 class DoneResult(BaseModel):
