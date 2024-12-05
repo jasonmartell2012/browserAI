@@ -91,8 +91,18 @@ class Browser:
 	async def _setup_browser(self, playwright: Playwright) -> PlaywrightBrowser:
 		"""Sets up and returns a Playwright Browser instance with anti-detection measures."""
 		if self.config.wss_url:
-			browser = await playwright.chromium.connect(self.config.wss_url)
-			return browser
+			try:
+				browser = await playwright.chromium.connect_over_cdp(
+					self.config.wss_url,
+					timeout=30000,  # 30 seconds timeout
+					headers={
+						"Accept-Language": "en-US,en;q=0.9",
+					},
+				)
+				return browser
+			except Exception as e:
+				logger.error(f'Failed to connect to browser via WSS: {str(e)}')
+				raise
 
 		else:
 			try:

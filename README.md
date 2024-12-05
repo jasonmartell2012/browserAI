@@ -179,6 +179,18 @@ The most important options are:
 - `wait_for_network_idle_page_load_time`: Time to wait for network requests to finish before getting the page state
 - `maximum_wait_page_load_time`: Maximum time to wait for the page to load before proceeding anyway
 
+## Using a remote cloud browser
+
+You can configure a remote browser using the `wss_url` initialization parameter.
+
+Example using Anchor Browser:
+
+```python
+browser = Browser(config=BrowserConfig(headless=False, wss_url='wss://connect.anchorbrowser.io?apiKey=<your-api-key>'))
+```
+
+For more information on Remote browsers see [docs.anchorbrowser.io](https://docs.anchorbrowser.io).
+
 ## More examples
 
 For more examples see the [examples](examples) folder or join the [Discord](https://link.browser-use.com/discord) and show off your project.
