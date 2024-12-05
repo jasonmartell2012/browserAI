@@ -4,9 +4,11 @@ Playwright browser on steroids.
 
 import asyncio
 import logging
+from typing import Union
 from dataclasses import dataclass, field
 
-from playwright.async_api import Browser as PlaywrightBrowser
+from playwright.async_api import Browser as PlaywrightBrowser, BrowserContext as PlaywrightBrowserContext
+
 from playwright.async_api import (
 	Playwright,
 	async_playwright,
@@ -86,7 +88,7 @@ class Browser:
 
 		return self.playwright_browser
 
-	async def _setup_browser(self, playwright: Playwright) -> PlaywrightBrowser:
+	async def _setup_browser(self, playwright: Playwright) -> Union[PlaywrightBrowser, PlaywrightBrowserContext]:
 		"""Sets up and returns a Playwright Browser instance with anti-detection measures."""
 		if self.config.wss_url:
 			browser = await playwright.chromium.connect(self.config.wss_url)
@@ -102,26 +104,54 @@ class Browser:
 						'--disable-features=IsolateOrigins,site-per-process',
 					]
 
-				browser = await playwright.chromium.launch(
-					headless=self.config.headless,
-					args=[
-						'--no-sandbox',
-						'--disable-blink-features=AutomationControlled',
-						'--disable-infobars',
-						'--disable-background-timer-throttling',
-						'--disable-popup-blocking',
-						'--disable-backgrounding-occluded-windows',
-						'--disable-renderer-backgrounding',
-						'--disable-window-activation',
-						'--disable-focus-on-load',
-						'--no-first-run',
-						'--no-default-browser-check',
-						'--no-startup-window',
-						'--window-position=0,0',
-					]
-					+ disable_security_args
-					+ self.config.extra_chromium_args,
-				)
+				if self.config.new_context_config.user_data_dir:
+					browser = await playwright.chromium.launch_persistent_context(
+						user_data_dir=self.config.new_context_config.user_data_dir,
+						headless=self.config.headless,
+						viewport=self.config.new_context_config.browser_window_size,
+						user_agent=(
+							'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 '
+							'(KHTML, like Gecko) Chrome/85.0.4183.102 Safari/537.36'
+						),
+						ignore_default_args=['--enable-automation'],  # Helps with anti-detection
+						args=[
+							'--no-sandbox',
+							'--disable-blink-features=AutomationControlled',
+							'--disable-extensions',
+							'--disable-infobars',
+							'--disable-background-timer-throttling',
+							'--disable-popup-blocking',
+							'--disable-backgrounding-occluded-windows',
+							'--disable-renderer-backgrounding',
+							'--disable-window-activation',
+							'--disable-focus-on-load',  # Prevents focus on navigation
+							'--no-first-run',
+							'--no-default-browser-check',
+							# '--no-startup-window',  # Prevents initial focus
+							'--window-position=0,0',
+						],
+					)
+				else:
+					browser = await playwright.chromium.launch(
+						headless=self.config.headless,
+						args=[
+							'--no-sandbox',
+							'--disable-blink-features=AutomationControlled',
+							'--disable-infobars',
+							'--disable-background-timer-throttling',
+							'--disable-popup-blocking',
+							'--disable-backgrounding-occluded-windows',
+							'--disable-renderer-backgrounding',
+							'--disable-window-activation',
+							'--disable-focus-on-load',
+							'--no-first-run',
+							'--no-default-browser-check',
+							'--no-startup-window',
+							'--window-position=0,0',
+						]
+						+ disable_security_args
+						+ self.config.extra_chromium_args,
+					)
 
 				return browser
 			except Exception as e:
