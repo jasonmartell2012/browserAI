@@ -53,6 +53,43 @@ OPENAI_API_KEY=
 
 For other settings, models, and more, check out the [documentation 📕](https://docs.browser-use.com).
 
+# Using Gradio UI
+
+To provide a better GUI for first-time users, you can use Gradio. Here's how to set it up:
+
+1. Install Gradio:
+
+```bash
+pip install gradio
+```
+
+2. Create a new file `gradio_ui.py`:
+
+```python
+import gradio as gr
+
+def create_gradio_interface():
+    def on_button_click(input_text):
+        return f"Button clicked with input: {input_text}"
+
+    with gr.Blocks() as demo:
+        text_input = gr.Textbox(label="Enter text")
+        button = gr.Button("Submit")
+        output = gr.Textbox(label="Output")
+
+        button.click(fn=on_button_click, inputs=text_input, outputs=output)
+
+    demo.launch()
+```
+
+3. Update your main file to import and initialize the Gradio interface:
+
+```python
+from gradio_ui import create_gradio_interface
+
+create_gradio_interface()
+```
+
 # Demos
 
 [Prompt](https://github.com/browser-use/browser-use/blob/main/examples/real_browser.py): Write a letter in Google Docs to my Papa, thanking him for everything, and save the document as a PDF.
