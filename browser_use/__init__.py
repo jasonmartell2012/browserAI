@@ -11,6 +11,9 @@ from browser_use.browser.browser import Browser as Browser
 from browser_use.browser.browser import BrowserConfig as BrowserConfig
 from browser_use.controller.service import Controller as Controller
 from browser_use.dom.service import DomService as DomService
+from browser_use.gradio_ui import create_gradio_interface
+
+create_gradio_interface()
 
 __all__ = [
 	'Agent',
